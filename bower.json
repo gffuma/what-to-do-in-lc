@@ -1,0 +1,7 @@
+{
+  "name": "what-to-do-in-lc",
+  "private": "true",
+  "dependencies": {
+    "picnic": "~6.1.1"
+  }
+}
