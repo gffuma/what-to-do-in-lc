@@ -7,6 +7,7 @@ export function dashboardApi(endpoint, additionalConfig = {}) {
     const url = `/api${endpoint}`;
     const fetchConfig = {
       ...additionalConfig,
+      credentials: 'same-origin',
       headers: {
         ...additionalConfig.headers,
         'X-CSRF-TOKEN': csrfToken

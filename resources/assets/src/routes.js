@@ -8,5 +8,6 @@ export default (
   <Route path="/" component={App}>
     <IndexRoute component={HelloPage} />
     <Route path="import" component={ImportEventsPage} />
+    <Route path="events" component={HelloPage} />
   </Route>
 );

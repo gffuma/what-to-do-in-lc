@@ -12,5 +12,7 @@ var elixir = require('laravel-elixir');
  */
 
 elixir(function(mix) {
-  mix.sass('dashboard/app.scss');
+  mix.sass('dashboard/app.scss', 'public/css/dashboard/app.css');
+  mix.sass('dashboard/signin.scss', 'public/css/dashboard/signin.css');
+  mix.scripts(['jquery.min.js', 'bootstrap.min.js'], 'public/js/dashboard/app.js');
 });

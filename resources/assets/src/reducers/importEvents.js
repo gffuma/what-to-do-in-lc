@@ -1,5 +1,5 @@
 import { combineReducers } from 'redux';
-import { concat } from 'lodash';
+import { concat, uniq } from 'lodash';
 import {
   LOAD_IMPORT_EVENTS_START,
   LOAD_IMPORT_EVENTS_COMPLETE,
@@ -14,9 +14,32 @@ const initialState = {
 };
 
 export default function importEvents(state = initialState, action) {
+  const { type, ids, paging, error } = action;
 
-  if (action.type === LOAD_IMPORT_EVENTS_COMPLETE) {
-    return {...state, ids: concat(state.ids, action.ids), nextUrl: action.paging.next };
+  switch (type) {
+    case LOAD_IMPORT_EVENTS_START:
+      return {
+        ...state,
+        loading: true
+      };
+
+    case LOAD_IMPORT_EVENTS_COMPLETE:
+      return {
+        ...state,
+        ids: uniq(concat(state.ids, ids)),
+        nextUrl: paging.next,
+        loading: false
+      };
+
+    case LOAD_IMPORT_EVENTS_FAILURE:
+      return {
+        ...state,
+        error,
+        loading: false
+      };
+
+    default:
+      return state;
   }
 
   return state;

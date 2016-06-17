@@ -7,8 +7,10 @@ body {
   /*line-height: 1.5em;*/
   padding-top: 70px;
   background-color: #eee;
+  padding-bottom: 50px;
 }
 
+/* TODO: Move to React */
 .events {
   @extend .list-group;
 }

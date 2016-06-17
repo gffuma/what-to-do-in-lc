@@ -1,27 +1,25 @@
 import React from 'react';
 import { connect } from 'react-redux';
-import { loadImportEvents } from '../actions/importEvents';
+import { loadImportEvents, importEvent } from '../actions/importEvents';
 import ImportEvents from '../components/ImportEvents';
 import { mapKeys } from 'lodash';
 
-function loadData(props) {
-  // TODO: Shitty name chage to loadImportEvents or listImportEvents
-  props.loadImportEvents();
-}
-
 class ImportEventsPage extends React.Component {
-
   componentWillMount() {
-    loadData(this.props);
+    this.props.loadImportEvents();
   }
 
   render() {
-    const { events } = this.props;
+    const { events, loading, nextUrl, importEvent } = this.props;
 
     return <div>
-      <ImportEvents events={events} />
+      <ImportEvents
+        events={events}
+        loading={loading}
+        onLoadMore={() => this.props.loadImportEvents()}
+        importEvent={importEvent}
+        canLoadMore={!!nextUrl}  />
     </div>;
-
 
     return (
       <div>
@@ -39,19 +37,22 @@ class ImportEventsPage extends React.Component {
 }
 
 function mapStateToProps(state) {
-  const { entities, importEvents } = state;
+  const { entities, importEvents: { ids, loading, nextUrl } } = state;
 
-  const events = importEvents.ids.map(fbid => {
+  //return { events: [
+    //{ fbid: null }
+  //] }
+
+  const events = ids.map(fbid => {
     const event = entities.importedEvents[fbid] ||
       mapKeys(entities.fbEvents[fbid], (v, k) => k === 'id' ? 'fbid' : k);
     return event;
   });
 
-  console.log(events)
-
-  return { events };
+  return { events, loading, nextUrl };
 }
 
 export default connect(mapStateToProps, {
   loadImportEvents,
+  importEvent,
 })(ImportEventsPage);
