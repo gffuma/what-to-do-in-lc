@@ -1,10 +1,9 @@
-import { combineReducers } from 'redux';
 import { concat, uniq } from 'lodash';
 import {
   LOAD_IMPORT_EVENTS_START,
   LOAD_IMPORT_EVENTS_COMPLETE,
   LOAD_IMPORT_EVENTS_FAILURE
-} from '../constants/ActionTypes';
+} from '../../constants/ActionTypes';
 
 const initialState = {
   ids: [],
@@ -13,7 +12,7 @@ const initialState = {
   nextUrl: null,
 };
 
-export default function importEvents(state = initialState, action) {
+export default function importEventsList(state = initialState, action) {
   const { type, ids, paging, error } = action;
 
   switch (type) {
@@ -41,6 +40,4 @@ export default function importEvents(state = initialState, action) {
     default:
       return state;
   }
-
-  return state;
 };

@@ -48,7 +48,8 @@ class EventController extends Controller
             $this->validate($request, [
                 'name' => 'required|max:255',
             ]);
-            $createdEvent = Event::create(array_merge(['fbid' => $fbId], $request->only('name')));
+            $createdEvent = Event::create(array_merge(['fbid' => $fbId], $request->only(
+                'name', 'description')));
             return response($createdEvent, 201); // Created :D
         }
     }

@@ -1,7 +1,7 @@
 import { graphApi } from './fb';
 import { dashboardApi } from './laravel';
 import { jsonPostConfig } from '../utils/fetch';
-import { property, keys, difference, concat, uniq } from 'lodash';
+import { property, keys, difference, uniq } from 'lodash';
 import { mergeEntities } from './entities';
 import {
   LOAD_IMPORT_EVENTS_START,
@@ -9,7 +9,11 @@ import {
   LOAD_IMPORT_EVENTS_FAILURE,
   IMPORT_EVENT_START,
   IMPORT_EVENT_COMPLETE,
-  IMPORT_EVENTS_FAILURE
+  IMPORT_EVENT_FAILURE,
+  SHOW_ALREADY_IMPORTED_EVENTS,
+  HIDE_ALREADY_IMPORTED_EVENTS,
+  SHOW_IMPORT_EVENTS_FULL_DESCRIPTION,
+  SHOW_IMPORT_EVENTS_LESS_DESCRIPTION
 } from '../constants/ActionTypes';
 
 const fbEventRe = /^https:\/\/www\.facebook\.com\/events\/([0-9]+)/;
@@ -41,7 +45,8 @@ export function importEvent(fbid) {
 
     // TODO: Better import
     const fetchConfig = jsonPostConfig({
-      name: fbEvent.name
+      name: fbEvent.name,
+      description: fbEvent.description,
     });
     dispatch(dashboardApi(`/events/import-from-fb/${fbid}`, fetchConfig))
       .then(
@@ -53,7 +58,7 @@ export function importEvent(fbid) {
         },
         // TODO: Improve error handling
         response => dispatch({
-          type: IMPORT_EVENTS_FAILURE,
+          type: IMPORT_EVENT_FAILURE,
           error: response.error,
           fbid
         })
@@ -69,7 +74,7 @@ export function loadImportEvents() {
     // I Fucking love spinners XD
     dispatch({ type: LOAD_IMPORT_EVENTS_START });
 
-    // ---------------- TRAIN XD
+     ////---------------- TRAIN XD
     //dispatch(mergeEntities({
       //fbEvents: {
         //1: {
@@ -95,7 +100,7 @@ export function loadImportEvents() {
       //ids: [1,2,3]
     //});
     //return;
-    // ----------------
+    //----------------
 
     // Error handler for the various http calls...
     // Both Laravel API and Facebook Graph API
@@ -104,8 +109,9 @@ export function loadImportEvents() {
       error: response.error || response
     });
 
+    // TODO: Maybe move in store!
     const fbPageId = 'cosafarealecco'; // Hardcoded with endless love...
-    const importUrl = getState().importEvents.nextUrl || `/${fbPageId}/posts?fields=link`;
+    const importUrl = getState().importEvents.list.nextUrl || `/${fbPageId}/posts?fields=link`;
 
     dispatch(graphApi(importUrl))
       .then(response => {
@@ -162,3 +168,21 @@ export function loadImportEvents() {
       }, handleError);
   };
 }
+
+export const showAlredyImportedEvents = () => ({
+  type: SHOW_ALREADY_IMPORTED_EVENTS
+});
+
+export const hideAlredyImportedEvents = () => ({
+  type: HIDE_ALREADY_IMPORTED_EVENTS
+});
+
+export const showFullDescription = (fbid) => ({
+  fbid,
+  type: SHOW_IMPORT_EVENTS_FULL_DESCRIPTION
+});
+
+export const showLessDescription = (fbid) => ({
+  fbid,
+  type: SHOW_IMPORT_EVENTS_LESS_DESCRIPTION
+});

@@ -1,0 +1,66 @@
+.event {
+  padding-top: 20px;
+  padding-bottom: 10px;
+  padding-left: 10px;
+  padding-right: 10px;
+}
+.event.imported {
+  background-color: #ddf3e7;
+}
+.event-name {
+  font-weight: bold;
+}
+.event:hover .event-name:after {
+  content: "\26A1";
+}
+.event-fb-id a {
+  /*color: #3a5795;*/
+  color: #d33682;
+  font-size: 0.8em;
+}
+.event-description {
+  margin-top: 5px;
+  font-size: 11px;
+  white-space: pre-wrap;
+}
+.event.importing {
+  opacity: 0.3;
+  background-color: #fff !important;
+}
+
+.event.importing button  {
+  pointer-events: none;
+  cursor: default;
+}
+
+.show-description {
+  padding-top: 5px;
+}
+.show-description a {
+  color: black;
+  font-weight: bold;
+  font-size: 12px;
+  cursor: pointer;
+  margin-top: 5px;
+}
+
+/*.event.imported .hh {*/
+  /*[>border-bottom: 1px solid #fff;<]*/
+/*}*/
+
+.event-header {
+  padding: 10px 15px;
+  /*background-color: #fdf6e3;*/
+  /*border-bottom: 1px solid #eee;*/
+}
+.event-body {
+  padding: 10px 15px;
+}
+/*.event-actions {*/
+
+  /*padding-bottom: 5px;*/
+/*}*/
+
+/*.event-actions {*/
+  /*padding: 20px;*/
+/*}*/

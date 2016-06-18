@@ -9,32 +9,3 @@ body {
   background-color: #eee;
   padding-bottom: 50px;
 }
-
-/* TODO: Move to React */
-.events {
-  @extend .list-group;
-}
-.event {
-  @extend .list-group-item;
-}
-.event.imported {
-  background-color: #ddf3e7;
-}
-.event-name {
-  font-weight: bold;
-}
-.event:hover .event-name:after {
-  content: "\26A1";
-}
-.event-fb-id a {
-  color: #3a5795;
-  font-size: 0.8em;
-}
-.event-description {
-  margin-top: 5px;
-  white-space: pre-wrap;
-}
-.event.importing {
-  opacity: 0.3;
-  background-color: #fff !important;
-}

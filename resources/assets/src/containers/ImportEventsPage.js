@@ -1,8 +1,18 @@
 import React from 'react';
 import { connect } from 'react-redux';
-import { loadImportEvents, importEvent } from '../actions/importEvents';
 import ImportEvents from '../components/ImportEvents';
-import { mapKeys } from 'lodash';
+import {
+  getImportEvents,
+  countAlredyImportedEvents
+} from '../selectors/importEvents';
+import {
+  loadImportEvents,
+  importEvent,
+  showFullDescription,
+  showLessDescription,
+  showAlredyImportedEvents,
+  hideAlredyImportedEvents
+} from '../actions/importEvents';
 
 class ImportEventsPage extends React.Component {
   componentWillMount() {
@@ -10,49 +20,57 @@ class ImportEventsPage extends React.Component {
   }
 
   render() {
-    const { events, loading, nextUrl, importEvent } = this.props;
-
-    return <div>
-      <ImportEvents
-        events={events}
-        loading={loading}
-        onLoadMore={() => this.props.loadImportEvents()}
-        importEvent={importEvent}
-        canLoadMore={!!nextUrl}  />
-    </div>;
+    const {
+      events,
+      alredyImportedCount,
+      loading,
+      canLoadMoreEvents,
+      importEvent,
+      loadImportEvents,
+      showFullDescription,
+      showLessDescription,
+      showAlredyImportedEvents,
+      hideAlredyImportedEvents,
+      filters
+    } = this.props;
 
     return (
-      <div>
-        {events.map(e => (
-          <div key={e.event.fbid || e.event.id} style={{ padding: '20px' }}>
-            <div>{e.event.name}</div>
-            <div>{e.event.fbid || e.event.id}</div>
-            <div>{e.imported ? 'IMPORTATO!' : 'IMPORTA...'}</div>
-          </div>
-        ))}
-      </div>
+      <ImportEvents
+        events={events}
+        alredyImportedCount={alredyImportedCount}
+        loading={loading}
+        canLoadMoreEvents={canLoadMoreEvents}
+        showAlredyImportedEvents={filters.showAlredyImportedEvents}
+        onLoadMoreEvents={loadImportEvents}
+        onEventImported={importEvent}
+        onShowFullDescription={showFullDescription}
+        onShowLessDescription={showLessDescription}
+        onShowAlredyImportedEvents={showAlredyImportedEvents}
+        onHideAlredyImportedEvents={hideAlredyImportedEvents}
+      />
     );
   }
 
 }
 
 function mapStateToProps(state) {
-  const { entities, importEvents: { ids, loading, nextUrl } } = state;
+  const { filters } = state.importEvents;
+  const { loading, nextUrl } = state.importEvents.list;
 
-  //return { events: [
-    //{ fbid: null }
-  //] }
-
-  const events = ids.map(fbid => {
-    const event = entities.importedEvents[fbid] ||
-      mapKeys(entities.fbEvents[fbid], (v, k) => k === 'id' ? 'fbid' : k);
-    return event;
-  });
-
-  return { events, loading, nextUrl };
+  return {
+    events: getImportEvents(state),
+    alredyImportedCount: countAlredyImportedEvents(state) ,
+    canLoadMoreEvents: !!nextUrl,
+    loading,
+    filters,
+  };
 }
 
 export default connect(mapStateToProps, {
   loadImportEvents,
   importEvent,
+  showFullDescription,
+  showLessDescription,
+  showAlredyImportedEvents,
+  hideAlredyImportedEvents,
 })(ImportEventsPage);

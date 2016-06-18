@@ -16,6 +16,7 @@ class CreateTableEvents extends Migration
             $table->increments('id');
             $table->string('fbid')->unique()->nullable();
             $table->string('name');
+            $table->text('description')->nullable();
             $table->timestamps();
         });
     }
