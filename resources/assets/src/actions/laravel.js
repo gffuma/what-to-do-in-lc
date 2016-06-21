@@ -14,6 +14,7 @@ export function dashboardApi(endpoint, additionalConfig = {}) {
       }
     };
 
+    // TODO: Better fetch wrapper O__o
     return fetch(url, fetchConfig)
       .then(response =>
         response.json().then(json => ({ json, response }))

@@ -8,6 +8,7 @@ import {
 import {
   loadImportEvents,
   importEvent,
+  deleteImportedEvent,
   showFullDescription,
   showLessDescription,
   showAlredyImportedEvents,
@@ -26,6 +27,7 @@ class ImportEventsPage extends React.Component {
       loading,
       canLoadMoreEvents,
       importEvent,
+      deleteImportedEvent,
       loadImportEvents,
       showFullDescription,
       showLessDescription,
@@ -33,6 +35,7 @@ class ImportEventsPage extends React.Component {
       hideAlredyImportedEvents,
       filters
     } = this.props;
+    //console.log(deleteImportedEvent);
 
     return (
       <ImportEvents
@@ -43,6 +46,7 @@ class ImportEventsPage extends React.Component {
         showAlredyImportedEvents={filters.showAlredyImportedEvents}
         onLoadMoreEvents={loadImportEvents}
         onEventImported={importEvent}
+        onEventDeleted={deleteImportedEvent}
         onShowFullDescription={showFullDescription}
         onShowLessDescription={showLessDescription}
         onShowAlredyImportedEvents={showAlredyImportedEvents}
@@ -69,6 +73,7 @@ function mapStateToProps(state) {
 export default connect(mapStateToProps, {
   loadImportEvents,
   importEvent,
+  deleteImportedEvent,
   showFullDescription,
   showLessDescription,
   showAlredyImportedEvents,

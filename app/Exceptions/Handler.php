@@ -45,6 +45,12 @@ class Handler extends ExceptionHandler
      */
     public function render($request, Exception $e)
     {
+
+        // TODO: Improve render api/* errors wiht json!
+        //dd($this->isHttpException($e));
+        //dd($e);
+        //dd($request->root());
+        //dd($request->is('api/*'));
         return parent::render($request, $e);
     }
 }

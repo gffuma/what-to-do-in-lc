@@ -1,8 +1,8 @@
 import { graphApi } from './fb';
 import { dashboardApi } from './laravel';
-import { jsonPostConfig } from '../utils/fetch';
+import { jsonPostConfig, deleteConfig } from '../utils/fetch';
 import { property, keys, difference, uniq } from 'lodash';
-import { mergeEntities } from './entities';
+import { mergeEntities, removeEntities } from './entities';
 import {
   LOAD_IMPORT_EVENTS_START,
   LOAD_IMPORT_EVENTS_COMPLETE,
@@ -13,7 +13,10 @@ import {
   SHOW_ALREADY_IMPORTED_EVENTS,
   HIDE_ALREADY_IMPORTED_EVENTS,
   SHOW_IMPORT_EVENTS_FULL_DESCRIPTION,
-  SHOW_IMPORT_EVENTS_LESS_DESCRIPTION
+  SHOW_IMPORT_EVENTS_LESS_DESCRIPTION,
+  DELETE_IMPORTED_EVENT_START,
+  DELETE_IMPORTED_EVENT_COMPLETE,
+  DELETE_IMPORTED_EVENT_FAILURE
 } from '../constants/ActionTypes';
 
 const fbEventRe = /^https:\/\/www\.facebook\.com\/events\/([0-9]+)/;
@@ -27,10 +30,61 @@ function grabFbEventsIdsFromLinks(links) {
 }
 
 const fbEventsByIds = (fbids) => (dispatch, getState) =>
-  dispatch(graphApi(`/?ids=${fbids.join(',')}`))
+  dispatch(graphApi(`/?ids=${fbids.join(',')}`));
+
+const fbEventById = (fbid) => (dispatch, getState) =>
+  dispatch(graphApi(`/${fbid}`));
 
 const importedEventsByFbIds = (fbids) => (dispatch, getState) =>
-  dispatch(dashboardApi(`/events/by-fb-ids/${fbids.join(',')}`));
+  dispatch(dashboardApi(`/events/by-fbids/${fbids.join(',')}`));
+
+
+// Delete imported event
+export function deleteImportedEvent(fbid) {
+  return (dispatch, getState) => {
+    const importedEvent = getState().entities.importedEvents[fbid];
+
+    // Invalid fbid
+    if (!importedEvent) {
+      throw new Error(`Invalid provided facebook id ${fbid} to remove.`);
+    }
+
+    // TODO: Util function for error handlers
+    // Error handler for the various http calls...
+    // Both Laravel API and Facebook Graph API
+    const handleError = response => dispatch({
+      type: DELETE_IMPORTED_EVENT_FAILURE,
+      error: response.error || response,
+      fbid
+    });
+
+    dispatch({ type: DELETE_IMPORTED_EVENT_START, fbid });
+
+    // Ask Mark for fb event if not in the store...
+    const promiseForFbEvent = (() => {
+      const fbEvent = getState().entities.fbEvents[fbid];
+      return fbEvent ? Promise.resolve(fbEvent) : dispatch(fbEventById(fbid));
+    })();
+
+    promiseForFbEvent
+      .then(fbEvent => {
+        const { id } = importedEvent;
+
+        // Delete from imported events...
+        dispatch(dashboardApi(`/events/${id}`, deleteConfig()))
+          .then(deletedEvent => {
+            dispatch({ type: DELETE_IMPORTED_EVENT_COMPLETE, fbid });
+            // Merge fresh(?) fbEvent in entities and remove the imported event
+            dispatch(mergeEntities({
+              fbEvents: { [fbid]: fbEvent }
+            }));
+            dispatch(removeEntities({
+              importedEvents: fbid
+            }));
+          }, handleError);
+      }, handleError);
+  };
+};
 
 
 // Import event
@@ -39,7 +93,9 @@ export function importEvent(fbid) {
     const fbEvent = getState().entities.fbEvents[fbid];
 
     // Invalid fbid
-    if (!fbEvent) return;
+    if (!fbEvent) {
+      throw new Error(`Invalid provided facebook id ${fbid} to import.`);
+    }
 
     dispatch({ type: IMPORT_EVENT_START, fbid });
 
@@ -51,7 +107,7 @@ export function importEvent(fbid) {
     dispatch(dashboardApi(`/events/import-from-fb/${fbid}`, fetchConfig))
       .then(
         event => {
-          dispatch({ type: IMPORT_EVENT_COMPLETE, event, fbid });
+          dispatch({ type: IMPORT_EVENT_COMPLETE, fbid });
           dispatch(mergeEntities({
             importedEvents: { [fbid]: event }
           }));
@@ -74,7 +130,7 @@ export function loadImportEvents() {
     // I Fucking love spinners XD
     dispatch({ type: LOAD_IMPORT_EVENTS_START });
 
-     ////---------------- TRAIN XD
+    //---------------- TRAIN XD
     //dispatch(mergeEntities({
       //fbEvents: {
         //1: {

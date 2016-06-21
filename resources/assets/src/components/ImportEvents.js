@@ -1,4 +1,5 @@
 import React, { Component } from 'react'
+import classNames from 'classnames';
 import Spinner from './Spinner';
 
 const fbEventUrl = fbid => `https://www.facebook.com/events/${fbid}`;
@@ -8,36 +9,50 @@ class EventItem extends Component {
     const {
       event,
       onEventImported,
+      onEventDeleted,
       onShowFullDescription,
       onShowLessDescription
     } = this.props;
     const {
       ui: {
+        deleting,
+        saving,
         importing,
         hasLongDescription,
         showFullDescription,
       }
     } = event;
-    const canBeImported = !event.id;
-
-    let classes = '';
-    if (event.id) {
-      classes += ' imported';
-    }
-    if (importing) {
-      classes += ' importing';
-    }
+    const imported = !!event.id;
+    const eventClass = classNames('list-group-item event', {
+      imported,
+      saving,
+      deleting,
+      importing,
+    });
 
     return (
-      <div className={`list-group-item event${classes}`}>
+      <div className={eventClass}>
 
         <div className="event-header">
           <div className="event-name pull-left">{event.name}</div>
           <div className="event-actions pull-right">
-            {canBeImported && (
+            {!imported && (
               <button
+                type="button"
                 className="btn btn-success btn-xs"
-                onClick={() => onEventImported(event.fbid)}>Import</button>
+                onClick={() => onEventImported(event.fbid)}>
+                <span className="glyphicon glyphicon-star" aria-hidden="true"></span>
+                {' '}Import
+              </button>
+            )}
+            {imported && (
+              <button
+                type="button"
+                className="btn btn-danger btn-xs"
+                onClick={() => onEventDeleted(event.fbid)}>
+                <span className="glyphicon glyphicon-remove-sign" aria-hidden="true"></span>
+                {' '}Remove
+              </button>
             )}
           </div>
           <div className="clearfix"/>
@@ -110,6 +125,7 @@ export default class ImportEvents extends Component {
       onLoadMoreEvents,
       showAlredyImportedEvents,
       onEventImported,
+      onEventDeleted,
       onShowFullDescription,
       onShowLessDescription,
       onShowAlredyImportedEvents,
@@ -131,7 +147,9 @@ export default class ImportEvents extends Component {
               event={event}
               onShowFullDescription={onShowFullDescription}
               onShowLessDescription={onShowLessDescription}
-              onEventImported={onEventImported} />
+              onEventDeleted={onEventDeleted}
+              onEventImported={onEventImported}
+            />
           ))}
         </div>
         {!loading && canLoadMoreEvents &&

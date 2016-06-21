@@ -9,6 +9,7 @@ import {
 const GRAPH_API_URL = 'https://graph.facebook.com';
 const GRAPH_API_VERSION = 'v2.6';
 
+// TODO: Better fetch wrapper O__o
 export function graphApi(endpoint, fetchConfig = {}) {
   return (dispatch, getState) => {
     const accessToken = getState().fb.access.token;

@@ -38,13 +38,16 @@ export const getImportEvents = createSelector(
 
     e.ui = defaults({
       importing: ui.importing[e.fbid],
+      deleting: ui.deleting[e.fbid],
       showFullDescription: ui.showFullDescription[e.fbid],
     }, {
       importing: false,
+      deleting: false,
       showFullDescription: false,
     });
 
     e.ui.hasLongDescription = e.description && e.description.length > 250;
+    e.ui.saving = e.ui.importing || e.ui.deleting;
 
     // Truncate description when is too long and cannot want to is it full
     if (e.ui.hasLongDescription && !e.ui.showFullDescription) {
