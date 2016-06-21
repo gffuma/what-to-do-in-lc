@@ -3,15 +3,115 @@
 namespace App\Http\Controllers\Dashboard\Api;
 
 use Illuminate\Http\Request;
-use Illuminate\Database\Eloquent\ModelNotFoundException;
 
 use App\Http\Requests;
 use App\Http\Controllers\Controller;
 use App\Event;
 use App\Category;
+use Validator;
 
 class EventController extends Controller
 {
+    /**
+     * Get Faceboook events
+     *
+     * @param  \Illuminate\Http\Request  $request
+     * @return \Illuminate\Http\Response
+     */
+    public function getFacebookEvents(Request $request)
+    {
+        // Got list of requested facebook ids...
+        $fbids = array_values(array_unique(explode(',', $request->get('fbids', ''))));
+
+        // 100 fbids max...
+        if (count($fbids) > 100) {
+            return response()->json([
+                'error' => 'You can ask 100 fbids maximum per time.'
+            ], 400);
+        }
+
+        // Filter by fbids...
+        return Event::whereIn('fbid', $fbids)->with('categories')->get();
+    }
+
+    /**
+     * Get Faceboook event
+     *
+     * @param  \Illuminate\Http\Request  $request
+     * @param  string                    $fbid
+     * @return \Illuminate\Http\Response
+     */
+    public function getFacebookEvent(Request $request, $fbid)
+    {
+        return Event::where('fbid', $fbid)->firstOrFail()->load('categories');
+    }
+
+    /**
+     * Import Facebook event
+     *
+     * @param  \Illuminate\Http\Request  $request
+     * @return \Illuminate\Http\Response
+     */
+    public function importFacebookEvent(Request $request)
+    {
+        // Check if fbid is alredy imported
+        // And when event alredy exist don't touch them...
+        if ($request->has('fbid')) {
+            $alredyImportedEvent = Event::where('fbid', $request->get('fbid'))->first();
+            if (!is_null($alredyImportedEvent)) {
+                return $alredyImportedEvent->load('categories');
+            }
+        }
+
+        // Import new event...
+        $this->validate($request, [
+            'fbid'         => 'required|max:100',
+            'name'         => 'required|max:255',
+            'cateogories'  => 'array',
+            'categories.*' => 'required|exists:categories,id'
+        ]);
+        $newImportedEvent = Event::create($request->only('fbid', 'name', 'description'));
+
+        if ($request->has('categories')) {
+            $newImportedEvent->categories()->sync($request->get('categories', []));
+        }
+
+        return response($newImportedEvent->load('categories'), 201); // Created :D
+    }
+
+    /**
+     * Update Facebook event
+     *
+     * @param  \Illuminate\Http\Request  $request
+     * @param  string                    $fbid
+     * @return \Illuminate\Http\Response
+     */
+    public function updateImportedFacebookEvent(Request $request, $fbid)
+    {
+        $event = Event::where('fbid', $fbid)->firstOrFail();
+        $this->validate($request, [
+            'name' => 'required|max:255',
+        ]);
+        $event->fill($request->only('name', 'description'));
+        $event->save();
+        return $event->load('categories');
+    }
+
+    /**
+     * Delete Facebook event
+     *
+     * @param  \Illuminate\Http\Request  $request
+     * @param  string                    $fbid
+     * @return \Illuminate\Http\Response
+     */
+    public function deleteImportedFacebookEvent(Request $request, $fbid)
+    {
+        $event = Event::where('fbid', $fbid)->firstOrFail();
+        $event->delete();
+
+        return response(null, 204); // No Content
+    }
+
     /**
      * List events
      *
@@ -20,7 +120,7 @@ class EventController extends Controller
      */
     public function getEvents(Request $request)
     {
-        return Event::with('categories')->paginate();
+        return Event::with('categories')->paginate(100);
     }
 
     /**
@@ -43,8 +143,38 @@ class EventController extends Controller
      */
     public function storeEvent(Request $request)
     {
-        //$ev
-        // TODO: Implement...
+        $this->validate($request, [
+            'fbid'         => 'required|unique:events|max:100',
+            'name'         => 'required|max:255',
+            'cateogories'  => 'array',
+            'categories.*' => 'required|exists:categories,id'
+        ]);
+        $newEvent = Event::create($request->only('fbid', 'name', 'description'));
+
+        if ($request->has('categories')) {
+            $newEvent->categories()->sync($request->get('categories', []));
+        }
+
+        return response($newEvent->load('categories'), 201); // Created :D
+    }
+
+    /**
+     * Store event
+     *
+     * @param  \Illuminate\Http\Request  $request
+     * @param  string                    $id
+     * @return \Illuminate\Http\Response
+     */
+    public function updateEvent(Request $request, $id)
+    {
+        $event = Event::findOrFail($id);
+        $this->validate($request, [
+            'fbid' => 'required|unique:events,fbid,'.$event->id.'|max:100',
+            'name' => 'required|max:255'
+        ]);
+        $event->fill($request->only('fbid', 'name', 'description'));
+        $event->save();
+        return $event->load('categories');
     }
 
     /**
@@ -56,85 +186,81 @@ class EventController extends Controller
      */
     public function deleteEvent(Request $request, $id)
     {
-        $event = Event::findOrFail($id)->load('categories');
+        $event = Event::findOrFail($id);
         $event->delete();
-        return $event;
+        return response(null, 204); // No Content
     }
 
-    // TODO: Finish implementation
+    /**
+     * Add event categories
+     *
+     * @param  \Illuminate\Http\Request  $request
+     * @param  string                    $id
+     * @return \Illuminate\Http\Response
+     */
     public function addCategoriesToEvent(Request $request, $id)
     {
         $event = Event::findOrFail($id);
+
         $this->validate($request, [
+            'categories'   => 'required|array',
             'categories.*' => 'required|exists:categories,id'
         ]);
-        // Ensure array
         $categoriesIds = $request->get('categories', []);
-        $categoriesIds = is_array($categoriesIds) ? $categoriesIds : [];
 
-        $categories = Category::whereIn('id', $categoriesIds)->get();
-        $event->categories()->associate($categories);
+        $event->categories()->sync($categoriesIds, false);
 
-        return $categories;
-    }
-
-    public function removeCategoryFromEvent()
-    {
-        // TODO: Implement
-    }
-
-    public function setEventCategories()
-    {
-        //$s
-        // TODO: Implement
+        return Category::whereIn('id', $categoriesIds)->get();
     }
 
     /**
-     * Events by facebook ids
+     * Set event categories
      *
      * @param  \Illuminate\Http\Request  $request
-     * @param  string                    $fbIdsStr
+     * @param  string                    $id
      * @return \Illuminate\Http\Response
      */
-    public function eventsByFacebookIds(Request $request, $fbIdsStr)
+    public function setEventCategories(Request $request, $id)
     {
-        // Got list of requested facebook ids
-        $fbIds = array_values(array_unique(explode(',', $fbIdsStr)));
+        $event = Event::findOrFail($id);
+        $this->validate($request, [
+            'categories'   => 'required|array',
+            'categories.*' => 'required|exists:categories,id'
+        ]);
+        $categoriesIds = $request->get('categories', []);
 
-        // Events by fbidS
-        $events = Event::whereIn('fbid', $fbIds)->with('categories')->get();
+        $event->categories()->sync($categoriesIds);
 
-        return $events->count() === 0
-            ? response()->json((object)[]) // JSON {} instead of []
-            : $events->keyBy('fbid');
+        return Category::whereIn('id', $categoriesIds)->get();
     }
 
     /**
-     * Import event from facebook
+     * Remove category from event
      *
      * @param  \Illuminate\Http\Request  $request
-     * @param  string                    $fbId
+     * @param  string                    $id
+     * @param  string                    $categoryId
      * @return \Illuminate\Http\Response
      */
-    public function importEventFromFacebook(Request $request, $fbId)
+    public function removeCategoryFromEvent(Request $request, $id, $categoryId)
     {
-        try {
-            // Event alredy exist don't touch them...
-            return Event::where('fbid', $fbId)->firstOrFail()->load('categories');
-        } catch(ModelNotFoundException $e) {
-            // Import event
-            $this->validate($request, [
-                'name' => 'required|max:255',
-                'categories.*' => 'required|exists:categories,id'
-            ]);
-            $createdEvent = Event::create(array_merge(['fbid' => $fbId], $request->only(
-                'name', 'description')));
+        $event = Event::findOrFail($id);
+        $category = Category::findOrFail($categoryId);
+        $event->categories()->detach($category);
+        return response(null, 204);
+    }
 
-            if (is_array($request->get('categories'))) {
-                $createdEvent->categories()->sync($request->get('categories', []));
-            }
-
-            return response($createdEvent->load('categories'), 201); // Created :D
-        }
+    /**
+     * Remove all categories from event
+     *
+     * @param  \Illuminate\Http\Request  $request
+     * @param  string                    $id
+     * @return \Illuminate\Http\Response
+     */
+    public function removeAllCategoriesFromEvent(Request $request, $id)
+    {
+        $event = Event::findOrFail($id);
+        $event->categories()->detach();
+        return response(null, 204);
     }
 }

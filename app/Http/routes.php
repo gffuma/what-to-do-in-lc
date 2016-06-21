@@ -15,19 +15,30 @@
 Route::group(['domain' => env('DASHBOARD_DOMAIN'), 'namespace' => 'Dashboard'], function () {
 
     // TODO: Handle exception with json in API
-    // Le dashboard api
+    // le Dashboard API
     Route::group(['prefix' => 'api', 'namespace' => 'Api'], function () {
 
         // Events...
+
+        // Facebook...
+        Route::get('events/fb', 'EventController@getFacebookEvents');
+        Route::get('events/fb/{fbid}', 'EventController@getFacebookEvent');
+        Route::post('events/fb', 'EventController@importFacebookEvent');
+        Route::put('events/fb/{fbid}', 'EventController@updateImportedFacebookEvent');
+        Route::delete('events/fb/{fbid}', 'EventController@deleteImportedFacebookEvent');
+
+        // REST...
         Route::get('events', 'EventController@getEvents');
         Route::get('events/{event}', 'EventController@getEvent');
-        //Route::post('events', 'EventController@storeEvent');
-        //Route::put('events/{event}', 'EventController@updateEvent');
+        Route::post('events', 'EventController@storeEvent');
+        Route::put('events/{event}', 'EventController@updateEvent');
         Route::delete('events/{event}', 'EventController@deleteEvent');
+
+        // Relation \w categories...
         Route::post('events/{event}/categories', 'EventController@addCategoriesToEvent');
-        Route::get('events/by-fbids/{fbids}', 'EventController@eventsByFacebookIds')
-            ->where(['fbids' => '^[0-9]+(,[0-9]+)*$']);
-        Route::post('events/import-from-fb/{fbid}', 'EventController@importEventFromFacebook');
+        Route::put('events/{event}/categories', 'EventController@setEventCategories');
+        Route::delete('events/{event}/categories/{category}', 'EventController@removeCategoryFromEvent');
+        Route::delete('events/{event}/categories', 'EventController@removeAllCategoriesFromEvent');
 
         // Categories...
         Route::get('categories', 'CategoryController@getCategories');

@@ -79,6 +79,6 @@ class CategoryController extends Controller
     {
         $category = Category::findOrFail($id);
         $category->delete();
-        return $category;
+        return response(null, 204); // No Content
     }
 }
