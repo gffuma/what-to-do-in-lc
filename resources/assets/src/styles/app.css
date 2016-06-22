@@ -65,9 +65,23 @@
 .event-body {
   padding: 10px 15px;
 }
+
 .event-actions button {
   margin-left: 2px;
   margin-right: 2px;
+}
+
+/*** Sgobbo mesi e sto in miseria :D ***/
+@media(min-width:992px){
+  .event-actions {
+    text-align: right;
+  }
+}
+@media(max-width:992px){
+  .event-actions {
+    padding-top: 10px;
+    padding-bottom: 10px;
+  }
 }
 
 /*.event-actions {*/

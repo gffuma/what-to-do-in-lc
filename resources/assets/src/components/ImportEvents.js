@@ -36,9 +36,13 @@ class EventItem extends Component {
       <div className={eventClass}>
 
         <div className="event-header">
-          <div className="event-name pull-left">{event.name}</div>
+          <div className="row">
+
+          <div className="event-name col-md-9">{event.name}</div>
+
+          <div className="col-md-3">
           {!imported && (
-            <div className="event-actions pull-right">
+            <div className="event-actions">
               <button
                 type="button"
                 className="btn btn-success btn-xs"
@@ -49,7 +53,7 @@ class EventItem extends Component {
             </div>
           )}
           {imported && (
-            <div className="event-actions pull-right">
+            <div className="event-actions">
               {false && <button
                 type="button"
                 className="btn btn-warning btn-xs">
@@ -72,7 +76,8 @@ class EventItem extends Component {
               </button>
             </div>
           )}
-          <div className="clearfix"/>
+          </div>
+          </div>
           {event.fbCoverImageUrl && (
             <div className="event-image">
               <img src={event.fbCoverImageUrl} style={{ maxHeight: 100 }} className="img-thumbnail" />
