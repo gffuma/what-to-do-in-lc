@@ -35,8 +35,8 @@ class EventItem extends Component {
 
         <div className="event-header">
           <div className="event-name pull-left">{event.name}</div>
-          <div className="event-actions pull-right">
-            {!imported && (
+          {!imported && (
+            <div className="event-actions pull-right">
               <button
                 type="button"
                 className="btn btn-success btn-xs"
@@ -44,8 +44,22 @@ class EventItem extends Component {
                 <span className="glyphicon glyphicon-star" aria-hidden="true"></span>
                 {' '}Import
               </button>
-            )}
-            {imported && (
+            </div>
+          )}
+          {imported && (
+            <div className="event-actions pull-right">
+              <button
+                type="button"
+                className="btn btn-warning btn-xs">
+                <span className="glyphicon glyphicon-edit" aria-hidden="true"></span>
+                {' '}Edit
+              </button>
+              <button
+                type="button"
+                className="btn btn-primary btn-xs">
+                <span className="glyphicon glyphicon-refresh" aria-hidden="true"></span>
+                {' '}Re-Sync
+              </button>
               <button
                 type="button"
                 className="btn btn-danger btn-xs"
@@ -53,8 +67,8 @@ class EventItem extends Component {
                 <span className="glyphicon glyphicon-remove-sign" aria-hidden="true"></span>
                 {' '}Remove
               </button>
-            )}
-          </div>
+            </div>
+          )}
           <div className="clearfix"/>
           <div className="event-fb-id">
             <a target="_blank" href={fbEventUrl(event.fbid)}>#{event.fbid}</a>

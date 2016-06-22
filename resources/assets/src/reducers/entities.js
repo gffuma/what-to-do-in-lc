@@ -7,6 +7,7 @@ import {
 const initialState = {
   fbEvents: {},
   importedEvents: {},
+  categories: {},
 };
 
 // Two level deep shallow merge only

@@ -1,8 +1,10 @@
+import { normalize } from 'normalizr';
 import { graphApi } from './fb';
 import { dashboardApi } from './laravel';
 import { jsonPostConfig, deleteConfig } from '../utils/fetch';
-import { property, keys, difference, uniq } from 'lodash';
+import { property, difference, uniq, omit} from 'lodash';
 import { mergeEntities, removeEntities } from './entities';
+import Schemas from '../schemas';
 import {
   LOAD_IMPORT_EVENTS_START,
   LOAD_IMPORT_EVENTS_COMPLETE,
@@ -35,9 +37,43 @@ const fbEventsByIds = (fbids) => (dispatch, getState) =>
 const fbEventById = (fbid) => (dispatch, getState) =>
   dispatch(graphApi(`/${fbid}`));
 
-const importedEventsByFbIds = (fbids) => (dispatch, getState) =>
-  dispatch(dashboardApi(`/events/by-fbids/${fbids.join(',')}`));
+const promiseForFreshFbEventById = (fbid) => (dispatch, getState) => {
+  const fbEvent = getState().entities.fbEvents[fbid];
+  return fbEvent
+     // Cached fb event without shit...
+    ? Promise.resolve(omit(fbEvent, ['categories']))
+    // Ask to Mark...
+    : dispatch(fbEventById(fbid));
+};
 
+const importedEventsByFbIds = (fbids) => (dispatch, getState) =>
+  dispatch(dashboardApi(`/events/fb?fbids=${fbids.join(',')}`))
+    // Normalize data...
+    .then(data => {
+      const { entities, result } = normalize(data, Schemas.IMPORTED_EVENT_ARRAY);
+      return { fbIds: result, entities };
+    });
+
+// TODO: In a very far future we can get events from differte sources...
+const getFbIdsToImport = () => (dispatch, getState) => {
+  // TODO: Maybe move in store!
+  const fbPageId = 'cosafarealecco'; // Hardcoded with endless love...
+  const importUrl = getState().importEvents.list.nextUrl || `/${fbPageId}/posts?fields=link`;
+
+  return dispatch(graphApi(importUrl))
+    .then(response => {
+      // List of ~~NEW~~ candidate facebook events ids to import
+      const fbIdsToImport = difference(
+        uniq(grabFbEventsIdsFromLinks(response.data.map(property('link')))),
+        getState().importEvents.ids
+      );
+
+      // Import response pagination stuff...
+      const paging = response.paging || {};
+
+      return { fbIdsToImport, paging };
+    });
+};
 
 // Delete imported event
 export function deleteImportedEvent(fbid) {
@@ -60,32 +96,23 @@ export function deleteImportedEvent(fbid) {
 
     dispatch({ type: DELETE_IMPORTED_EVENT_START, fbid });
 
-    // Ask Mark for fb event if not in the store...
-    const promiseForFbEvent = (() => {
-      const fbEvent = getState().entities.fbEvents[fbid];
-      return fbEvent ? Promise.resolve(fbEvent) : dispatch(fbEventById(fbid));
-    })();
-
-    promiseForFbEvent
+    dispatch(promiseForFreshFbEventById(fbid))
       .then(fbEvent => {
-        const { id } = importedEvent;
-
         // Delete from imported events...
-        dispatch(dashboardApi(`/events/${id}`, deleteConfig()))
-          .then(deletedEvent => {
-            dispatch({ type: DELETE_IMPORTED_EVENT_COMPLETE, fbid });
-            // Merge fresh(?) fbEvent in entities and remove the imported event
+        dispatch(dashboardApi(`/events/fb/${fbid}`, deleteConfig()))
+          .then(() => {
+            // Merge fresh(?) facebook event in entities and remove the imported event
             dispatch(mergeEntities({
               fbEvents: { [fbid]: fbEvent }
             }));
             dispatch(removeEntities({
               importedEvents: fbid
             }));
+            dispatch({ type: DELETE_IMPORTED_EVENT_COMPLETE, fbid });
           }, handleError);
       }, handleError);
   };
 };
-
 
 // Import event
 export function importEvent(fbid) {
@@ -101,16 +128,17 @@ export function importEvent(fbid) {
 
     // TODO: Better import
     const fetchConfig = jsonPostConfig({
+      fbid,
       name: fbEvent.name,
       description: fbEvent.description,
     });
-    dispatch(dashboardApi(`/events/import-from-fb/${fbid}`, fetchConfig))
+    dispatch(dashboardApi(`/events/fb`, fetchConfig))
       .then(
         event => {
-          dispatch({ type: IMPORT_EVENT_COMPLETE, fbid });
           dispatch(mergeEntities({
-            importedEvents: { [fbid]: event }
+            ...normalize(event, Schemas.IMPORTED_EVENT).entities
           }));
+          dispatch({ type: IMPORT_EVENT_COMPLETE, fbid });
         },
         // TODO: Improve error handling
         response => dispatch({
@@ -130,34 +158,6 @@ export function loadImportEvents() {
     // I Fucking love spinners XD
     dispatch({ type: LOAD_IMPORT_EVENTS_START });
 
-    //---------------- TRAIN XD
-    //dispatch(mergeEntities({
-      //fbEvents: {
-        //1: {
-          //id: 1,
-          //name: 'YEAH!'
-        //},
-        //2: {
-          //id: 2,
-          //name: 'Banane gratis'
-        //}
-      //},
-      //importedEvents: {
-        //3: {
-          //id: 44444,
-          //fbid: 3,
-          //name: 'ITP!'
-        //}
-      //}
-    //}));
-    //dispatch({
-      //paging: {},
-      //type: LOAD_IMPORT_EVENTS_COMPLETE,
-      //ids: [1,2,3]
-    //});
-    //return;
-    //----------------
-
     // Error handler for the various http calls...
     // Both Laravel API and Facebook Graph API
     const handleError = response => dispatch({
@@ -165,59 +165,51 @@ export function loadImportEvents() {
       error: response.error || response
     });
 
-    // TODO: Maybe move in store!
-    const fbPageId = 'cosafarealecco'; // Hardcoded with endless love...
-    const importUrl = getState().importEvents.list.nextUrl || `/${fbPageId}/posts?fields=link`;
+    dispatch(getFbIdsToImport())
+      .then(({ fbIdsToImport, paging }) => {
 
-    dispatch(graphApi(importUrl))
-      .then(response => {
-        // List of ~~NEW~~ candidate facebook events ids to import
-        const fbEventsIdsToImport = difference(
-          uniq(grabFbEventsIdsFromLinks(response.data.map(property('link')))),
-          getState().importEvents.ids
-        );
-
-        // Import response pagination stuff...
-        const paging = response.paging || {};
-
-        // No events posted by page... Import complete!
-        if (fbEventsIdsToImport.length === 0) {
-          dispatch({ paging, type: LOAD_IMPORT_EVENTS_COMPLETE, ids: [] });
+        // No new events posted by page... Import complete!
+        if (fbIdsToImport.length === 0) {
+          dispatch({
+            paging,
+            type: LOAD_IMPORT_EVENTS_COMPLETE,
+            ids: fbIdsToImport
+          });
           return;
         }
 
-        dispatch(importedEventsByFbIds(fbEventsIdsToImport))
-          .then(importedEvents => {
-            const importedFbEventsIds = keys(importedEvents);
-            const newFbEventsIds = difference(fbEventsIdsToImport, importedFbEventsIds);
+        dispatch(importedEventsByFbIds(fbIdsToImport))
+          .then(({ fbIds, entities }) => {
+            const notImportedFbIds = difference(fbIdsToImport, fbIds);
 
-            // No new events, all alredy imported, Import complete!
-            if (newFbEventsIds.length === 0) {
+            // All facebook ids are alredy imported... Import complete!
+            if (notImportedFbIds.length === 0) {
               dispatch(mergeEntities({
-                importedEvents
+                ...entities
               }));
               dispatch({
                 paging,
                 type: LOAD_IMPORT_EVENTS_COMPLETE,
-                ids: fbEventsIdsToImport
+                ids: fbIdsToImport
               });
               return;
             }
 
-            dispatch(fbEventsByIds(newFbEventsIds))
+            dispatch(fbEventsByIds(notImportedFbIds))
               .then(fbEvents => {
-                  const fbEventsIds = fbEventsIdsToImport.filter(fbid =>
-                    importedEvents[fbid] || fbEvents[fbid]
+                  // Some ids could be invalid...
+                  const importedFbIds = fbIdsToImport.filter(fbid =>
+                    entities.importedEvents[fbid] || fbEvents[fbid]
                   );
                   // Finally can back to Itaca!
                   dispatch(mergeEntities({
                     fbEvents,
-                    importedEvents
+                    ...entities
                   }));
                   dispatch({
                     paging,
                     type: LOAD_IMPORT_EVENTS_COMPLETE,
-                    ids: fbEventsIds
+                    ids: importedFbIds
                   });
               }, handleError);
           }, handleError);

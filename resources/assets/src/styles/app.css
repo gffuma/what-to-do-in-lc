@@ -54,10 +54,10 @@
 .event-body {
   padding: 10px 15px;
 }
-/*.event-actions {*/
-
-  /*padding-bottom: 5px;*/
-/*}*/
+.event-actions button {
+  margin-left: 2px;
+  margin-right: 2px;
+}
 
 /*.event-actions {*/
   /*padding: 20px;*/
