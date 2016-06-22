@@ -10,6 +10,7 @@ class EventItem extends Component {
       event,
       onEventImported,
       onEventDeleted,
+      onEventResync,
       onShowFullDescription,
       onShowLessDescription
     } = this.props;
@@ -56,6 +57,7 @@ class EventItem extends Component {
               </button>
               <button
                 type="button"
+                onClick={() => onEventResync(event.fbid)}
                 className="btn btn-primary btn-xs">
                 <span className="glyphicon glyphicon-refresh" aria-hidden="true"></span>
                 {' '}Re-Sync
@@ -139,6 +141,7 @@ export default class ImportEvents extends Component {
       onLoadMoreEvents,
       showAlredyImportedEvents,
       onEventImported,
+      onEventResync,
       onEventDeleted,
       onShowFullDescription,
       onShowLessDescription,
@@ -162,6 +165,7 @@ export default class ImportEvents extends Component {
               onShowFullDescription={onShowFullDescription}
               onShowLessDescription={onShowLessDescription}
               onEventDeleted={onEventDeleted}
+              onEventResync={onEventResync}
               onEventImported={onEventImported}
             />
           ))}

@@ -1,8 +1,8 @@
 import { normalize } from 'normalizr';
 import { graphApi } from './fb';
 import { dashboardApi } from './laravel';
-import { jsonPostConfig, deleteConfig } from '../utils/fetch';
-import { property, difference, uniq, omit} from 'lodash';
+import { jsonPostConfig, deleteConfig, jsonPutConfig } from '../utils/fetch';
+import { property, difference, uniq, omit, flow, pick, mapKeys } from 'lodash';
 import { mergeEntities, removeEntities } from './entities';
 import Schemas from '../schemas';
 import {
@@ -18,18 +18,57 @@ import {
   SHOW_IMPORT_EVENTS_LESS_DESCRIPTION,
   DELETE_IMPORTED_EVENT_START,
   DELETE_IMPORTED_EVENT_COMPLETE,
-  DELETE_IMPORTED_EVENT_FAILURE
+  DELETE_IMPORTED_EVENT_FAILURE,
+  RESYNC_IMPORTED_EVENT_START,
+  RESYNC_IMPORTED_EVENT_COMPLETE,
+  RESYNC_IMPORTED_EVENT_FAILURE
 } from '../constants/ActionTypes';
+
+// Grab facebook events ids from links in reponse
 
 const fbEventRe = /^https:\/\/www\.facebook\.com\/events\/([0-9]+)/;
 
-// Grab facebook events ids from links in reponse
-function grabFbEventsIdsFromLinks(links) {
-  return links.reduce((r, v) => {
-    const matches = v ? v.match(fbEventRe) : false;
-    return matches ? [...r, matches[1]] : r;
-  }, []);
+const grabFbEventsIdsFromLinks = (links) => links.reduce((r, v) => {
+  const matches = v ? v.match(fbEventRe) : false;
+  return matches ? [...r, matches[1]] : r;
+}, []);
+
+// Error handling...
+// TODO: Imporve error handling
+const makeHandleFbError = (type, data = {}) => (r) => (dispatch, getState) => dispatch({
+  ...data,
+  type,
+  error: r.error ? `Mark Says ${r.error}` : r
+});
+
+const makeHandleDashError = (type, data = {}) => (r) => (dispatch, getState) => dispatch({
+  ...data,
+  type,
+  error: r.error || r
+});
+
+const err = (error) => {
+  throw new Error(error);
+};
+
+// Normalize stuff...
+
+const normalizeImportEvent = (event) => {
+  const { entities, result } = normalize(event, Schemas.IMPORTED_EVENT);
+  return { fbId: result, entities };
 }
+
+const normalizeImportEvents = (events) => {
+  const { entities, result } = normalize(events, Schemas.IMPORTED_EVENT_ARRAY);
+  return { fbIds: result, entities };
+};
+
+// Convert facebook event to imported event, replace id with fbid
+// and pick only ceratin fields...
+const importedEventFromFbEvent = (fbEvent) => flow(
+  e => mapKeys(e, (v, k) => k === 'id' ? 'fbid' : k),
+  e => pick(e, ['fbid', 'name', 'description', 'categories'])
+)(fbEvent);
 
 const fbEventsByIds = (fbids) => (dispatch, getState) =>
   dispatch(graphApi(`/?ids=${fbids.join(',')}`));
@@ -48,11 +87,7 @@ const promiseForFreshFbEventById = (fbid) => (dispatch, getState) => {
 
 const importedEventsByFbIds = (fbids) => (dispatch, getState) =>
   dispatch(dashboardApi(`/events/fb?fbids=${fbids.join(',')}`))
-    // Normalize data...
-    .then(data => {
-      const { entities, result } = normalize(data, Schemas.IMPORTED_EVENT_ARRAY);
-      return { fbIds: result, entities };
-    });
+    .then(normalizeImportEvents);
 
 // TODO: In a very far future we can get events from differte sources...
 const getFbIdsToImport = () => (dispatch, getState) => {
@@ -75,24 +110,42 @@ const getFbIdsToImport = () => (dispatch, getState) => {
     });
 };
 
+// ReSync imported event with facebook
+export function reSyncImportedEvent(fbid) {
+  return (dispatch, getState) => {
+    const importedEvent = getState().entities.importedEvents[fbid];
+
+    !importedEvent && err(`Invalid provided facebook id ${fbid} to resync.`);
+
+    const handleFbError = makeHandleFbError(RESYNC_IMPORTED_EVENT_FAILURE, { fbid });
+    const handleDashError = makeHandleDashError(RESYNC_IMPORTED_EVENT_FAILURE, { fbid });
+
+    dispatch({ type: RESYNC_IMPORTED_EVENT_START, fbid });
+
+    dispatch(fbEventById(fbid))
+      .then(fbEvent => {
+        const fetchConfig = jsonPutConfig(importedEventFromFbEvent(fbEvent));
+        dispatch(dashboardApi(`/events/fb/${fbid}`, fetchConfig))
+          .then(event => {
+            dispatch(mergeEntities({
+              ...normalizeImportEvent(event).entities,
+              fbEvents: { [fbid]: fbEvent }
+            }));
+            dispatch({ type: RESYNC_IMPORTED_EVENT_COMPLETE, fbid });
+          }, (r) => dispatch(handleDashError(r)));
+      }, (r) => dispatch(handleFbError(r)));
+  };
+};
+
 // Delete imported event
 export function deleteImportedEvent(fbid) {
   return (dispatch, getState) => {
     const importedEvent = getState().entities.importedEvents[fbid];
 
-    // Invalid fbid
-    if (!importedEvent) {
-      throw new Error(`Invalid provided facebook id ${fbid} to remove.`);
-    }
+    !importedEvent && err(`Invalid provided facebook id ${fbid} to remove.`);
 
-    // TODO: Util function for error handlers
-    // Error handler for the various http calls...
-    // Both Laravel API and Facebook Graph API
-    const handleError = response => dispatch({
-      type: DELETE_IMPORTED_EVENT_FAILURE,
-      error: response.error || response,
-      fbid
-    });
+    const handleFbError = makeHandleFbError(DELETE_IMPORTED_EVENT_FAILURE, { fbid });
+    const handleDashError = makeHandleDashError(DELETE_IMPORTED_EVENT_FAILURE, { fbid });
 
     dispatch({ type: DELETE_IMPORTED_EVENT_START, fbid });
 
@@ -109,8 +162,8 @@ export function deleteImportedEvent(fbid) {
               importedEvents: fbid
             }));
             dispatch({ type: DELETE_IMPORTED_EVENT_COMPLETE, fbid });
-          }, handleError);
-      }, handleError);
+          }, (r) => dispatch(handleDashError(r)));
+      }, (r) => dispatch(handleFbError(r)));
   };
 };
 
@@ -119,34 +172,20 @@ export function importEvent(fbid) {
   return (dispatch, getState) => {
     const fbEvent = getState().entities.fbEvents[fbid];
 
-    // Invalid fbid
-    if (!fbEvent) {
-      throw new Error(`Invalid provided facebook id ${fbid} to import.`);
-    }
+    !fbEvent && err(`Invalid provided facebook id ${fbid} to import.`);
+
+    const handleDashError = makeHandleDashError(IMPORT_EVENT_FAILURE, { fbid });
 
     dispatch({ type: IMPORT_EVENT_START, fbid });
 
-    // TODO: Better import
-    const fetchConfig = jsonPostConfig({
-      fbid,
-      name: fbEvent.name,
-      description: fbEvent.description,
-    });
+    const fetchConfig = jsonPostConfig(importedEventFromFbEvent(fbEvent));
     dispatch(dashboardApi(`/events/fb`, fetchConfig))
-      .then(
-        event => {
-          dispatch(mergeEntities({
-            ...normalize(event, Schemas.IMPORTED_EVENT).entities
-          }));
-          dispatch({ type: IMPORT_EVENT_COMPLETE, fbid });
-        },
-        // TODO: Improve error handling
-        response => dispatch({
-          type: IMPORT_EVENT_FAILURE,
-          error: response.error,
-          fbid
-        })
-      );
+      .then(event => {
+        dispatch(mergeEntities({
+          ...normalizeImportEvent(event).entities
+        }));
+        dispatch({ type: IMPORT_EVENT_COMPLETE, fbid });
+      }, (r) => dispatch(handleDashError(r)));
   };
 }
 
@@ -155,15 +194,10 @@ export function loadImportEvents() {
   return (dispatch, getState) => {
     // Start the odissea
 
-    // I Fucking love spinners XD
-    dispatch({ type: LOAD_IMPORT_EVENTS_START });
+    const handleFbError = makeHandleFbError(LOAD_IMPORT_EVENTS_FAILURE);
+    const handleDashError = makeHandleDashError(LOAD_IMPORT_EVENTS_FAILURE);
 
-    // Error handler for the various http calls...
-    // Both Laravel API and Facebook Graph API
-    const handleError = response => dispatch({
-      type: LOAD_IMPORT_EVENTS_FAILURE,
-      error: response.error || response
-    });
+    dispatch({ type: LOAD_IMPORT_EVENTS_START });
 
     dispatch(getFbIdsToImport())
       .then(({ fbIdsToImport, paging }) => {
@@ -211,9 +245,9 @@ export function loadImportEvents() {
                     type: LOAD_IMPORT_EVENTS_COMPLETE,
                     ids: importedFbIds
                   });
-              }, handleError);
-          }, handleError);
-      }, handleError);
+              }, (r) => dispatch(handleFbError(r)));
+          }, (r) => dispatch(handleDashError(r)));
+      }, (r) => dispatch(handleFbError(r)));
   };
 }
 

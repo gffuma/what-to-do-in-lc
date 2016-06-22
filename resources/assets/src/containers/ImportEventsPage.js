@@ -9,6 +9,7 @@ import {
   loadImportEvents,
   importEvent,
   deleteImportedEvent,
+  reSyncImportedEvent,
   showFullDescription,
   showLessDescription,
   showAlredyImportedEvents,
@@ -27,6 +28,7 @@ class ImportEventsPage extends React.Component {
       loading,
       canLoadMoreEvents,
       importEvent,
+      reSyncImportedEvent,
       deleteImportedEvent,
       loadImportEvents,
       showFullDescription,
@@ -35,7 +37,6 @@ class ImportEventsPage extends React.Component {
       hideAlredyImportedEvents,
       filters
     } = this.props;
-    //console.log(deleteImportedEvent);
 
     return (
       <ImportEvents
@@ -46,6 +47,7 @@ class ImportEventsPage extends React.Component {
         showAlredyImportedEvents={filters.showAlredyImportedEvents}
         onLoadMoreEvents={loadImportEvents}
         onEventImported={importEvent}
+        onEventResync={reSyncImportedEvent}
         onEventDeleted={deleteImportedEvent}
         onShowFullDescription={showFullDescription}
         onShowLessDescription={showLessDescription}
@@ -73,6 +75,7 @@ function mapStateToProps(state) {
 export default connect(mapStateToProps, {
   loadImportEvents,
   importEvent,
+  reSyncImportedEvent,
   deleteImportedEvent,
   showFullDescription,
   showLessDescription,

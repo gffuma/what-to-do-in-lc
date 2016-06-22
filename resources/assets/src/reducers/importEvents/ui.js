@@ -6,19 +6,43 @@ import {
   IMPORT_EVENT_FAILURE,
   DELETE_IMPORTED_EVENT_START,
   DELETE_IMPORTED_EVENT_COMPLETE,
-  DELETE_IMPORTED_EVENT_FAILURE
+  DELETE_IMPORTED_EVENT_FAILURE,
+  RESYNC_IMPORTED_EVENT_START,
+  RESYNC_IMPORTED_EVENT_COMPLETE,
+  RESYNC_IMPORTED_EVENT_FAILURE
 } from '../../constants/ActionTypes';
 
 const initialState = {
   showFullDescription: {},
   importing: {},
   deleting: {},
+  resync: {},
 };
 
+// TODO: Try to implement an hight order reducer...
 export default function importEventsUI(state = initialState, action) {
   const { type, fbid } = action;
 
   switch (type) {
+    case RESYNC_IMPORTED_EVENT_START:
+      return {
+        ...state,
+        resync: {
+          ...state.resync,
+          [fbid]: true
+        }
+      };
+
+    case RESYNC_IMPORTED_EVENT_COMPLETE:
+    case RESYNC_IMPORTED_EVENT_FAILURE:
+      return {
+        ...state,
+        resync: {
+          ...state.resync,
+          [fbid]: false
+        }
+      };
+
     case DELETE_IMPORTED_EVENT_START:
       return {
         ...state,
