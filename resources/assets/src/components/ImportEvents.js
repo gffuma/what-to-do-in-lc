@@ -1,5 +1,6 @@
 import React, { Component } from 'react'
 import classNames from 'classnames';
+import moment from 'moment';
 import Spinner from './Spinner';
 
 const fbEventUrl = fbid => `https://www.facebook.com/events/${fbid}`;
@@ -49,12 +50,12 @@ class EventItem extends Component {
           )}
           {imported && (
             <div className="event-actions pull-right">
-              <button
+              {false && <button
                 type="button"
                 className="btn btn-warning btn-xs">
                 <span className="glyphicon glyphicon-edit" aria-hidden="true"></span>
                 {' '}Edit
-              </button>
+              </button>}
               <button
                 type="button"
                 onClick={() => onEventResync(event.fbid)}
@@ -72,8 +73,29 @@ class EventItem extends Component {
             </div>
           )}
           <div className="clearfix"/>
+          {event.fbCoverImageUrl && (
+            <div className="event-image">
+              <img src={event.fbCoverImageUrl} style={{ maxHeight: 100 }} className="img-thumbnail" />
+            </div>
+          )}
           <div className="event-fb-id">
             <a target="_blank" href={fbEventUrl(event.fbid)}>#{event.fbid}</a>
+          </div>
+          <div className="event-small-info">
+            <div>
+              <span className="glyphicon glyphicon-map-marker" aria-hidden="true"></span>
+              {' '}{event.placeName} {event.city} {event.street} {event.zip} {event.country}{' '}
+            </div>
+            <div>
+              <span className="glyphicon glyphicon-time" aria-hidden="true"></span>
+              {' '}
+              {moment(event.startTime).format('dddd M MMMM HH:mm')}
+              {event.endTime && <span>{' - '}{moment(event.endTime).format('dddd M MMMM HH:mm')}</span>}
+            </div>
+            <span>
+              <span className="glyphicon glyphicon-user" aria-hidden="true"></span>
+              {' '}{event.fbAttendingCount}{' '}
+            </span>
           </div>
         </div>
 

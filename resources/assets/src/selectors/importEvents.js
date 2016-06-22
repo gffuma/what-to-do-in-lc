@@ -8,10 +8,7 @@ const getImportEventsIds = (state) => state.importEvents.list.ids;
 const getImportEventsList = createSelector(
   [ getImportEventsIds, getFbEventsEntity, getImportedEventsEntity ],
   (importedEventsIds, fbEventsEntity, importedEventsEntity) => (
-    importedEventsIds.map(fbid => {
-      return importedEventsEntity[fbid] ||
-        mapKeys(fbEventsEntity[fbid], (v, k) => k === 'id' ? 'fbid' : k);
-    })
+    importedEventsIds.map(fbid => importedEventsEntity[fbid] || fbEventsEntity[fbid])
   )
 );
 

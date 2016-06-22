@@ -2,7 +2,7 @@ import { normalize } from 'normalizr';
 import { graphApi } from './fb';
 import { dashboardApi } from './laravel';
 import { jsonPostConfig, deleteConfig, jsonPutConfig } from '../utils/fetch';
-import { property, difference, uniq, omit, flow, pick, mapKeys } from 'lodash';
+import { property, difference, uniq, omit, flow, pick, get, mapKeys, mapValues } from 'lodash';
 import { mergeEntities, removeEntities } from './entities';
 import Schemas from '../schemas';
 import {
@@ -63,18 +63,31 @@ const normalizeImportEvents = (events) => {
   return { fbIds: result, entities };
 };
 
-// Convert facebook event to imported event, replace id with fbid
-// and pick only ceratin fields...
-const importedEventFromFbEvent = (fbEvent) => flow(
-  e => mapKeys(e, (v, k) => k === 'id' ? 'fbid' : k),
-  e => pick(e, ['fbid', 'name', 'description', 'categories'])
-)(fbEvent);
+
+// Convert graph API facebook event to imported event...
+const transformGraphFbEvent = (e) => ({
+  fbid: e.id,
+  fbAttendingCount: e.attendingCount,
+  fbCoverImageUrl: get(e, 'cover.source'),
+  placeName: get(e, 'place.name'),
+  ...get(e, 'place.location', {}),
+  ...pick(e, ['name', 'description', 'startTime', 'endTime'])
+});
+//const transformGraphFbEvent = (fbEvent) => flow(
+  //e => mapKeys(e, (v, k) => k === 'id' ? 'fbid' : k),
+  //e => pick(e, ['fbid', 'name', 'description', 'categories', 'start_time', 'type'])
+//)(fbEvent);
+
+const fbEventFields = ['name', 'description', 'start_time', 'end_time',
+  'cover', 'place', 'attending_count'];
 
 const fbEventsByIds = (fbids) => (dispatch, getState) =>
-  dispatch(graphApi(`/?ids=${fbids.join(',')}`));
+  dispatch(graphApi(`/?ids=${fbids.join(',')}&fields=${fbEventFields.join(',')}&pretty=0`))
+    .then(data => mapValues(data, transformGraphFbEvent));
 
 const fbEventById = (fbid) => (dispatch, getState) =>
-  dispatch(graphApi(`/${fbid}`));
+  dispatch(graphApi(`/${fbid}?fields=${fbEventFields.join(',')}&pretty=0`))
+    .then(transformGraphFbEvent);
 
 const promiseForFreshFbEventById = (fbid) => (dispatch, getState) => {
   const fbEvent = getState().entities.fbEvents[fbid];
@@ -92,8 +105,8 @@ const importedEventsByFbIds = (fbids) => (dispatch, getState) =>
 // TODO: In a very far future we can get events from differte sources...
 const getFbIdsToImport = () => (dispatch, getState) => {
   // TODO: Maybe move in store!
-  const fbPageId = 'ClementinoIenaWhite'; // Hardcoded with endless love...
-  const importUrl = getState().importEvents.list.nextUrl || `/${fbPageId}/posts?fields=link`;
+  const fbPageId = 'cosafarealecco'; // Hardcoded with endless love...
+  const importUrl = getState().importEvents.list.nextUrl || `/${fbPageId}/posts?fields=link&pretty=0`;
 
   return dispatch(graphApi(importUrl))
     .then(response => {
@@ -124,8 +137,7 @@ export function reSyncImportedEvent(fbid) {
 
     dispatch(fbEventById(fbid))
       .then(fbEvent => {
-        const fetchConfig = jsonPutConfig(importedEventFromFbEvent(fbEvent));
-        dispatch(dashboardApi(`/events/fb/${fbid}`, fetchConfig))
+        dispatch(dashboardApi(`/events/fb/${fbid}`, jsonPutConfig(fbEvent)))
           .then(event => {
             dispatch(mergeEntities({
               ...normalizeImportEvent(event).entities,
@@ -178,8 +190,7 @@ export function importEvent(fbid) {
 
     dispatch({ type: IMPORT_EVENT_START, fbid });
 
-    const fetchConfig = jsonPostConfig(importedEventFromFbEvent(fbEvent));
-    dispatch(dashboardApi(`/events/fb`, fetchConfig))
+    dispatch(dashboardApi(`/events/fb`, jsonPostConfig(fbEvent)))
       .then(event => {
         dispatch(mergeEntities({
           ...normalizeImportEvent(event).entities

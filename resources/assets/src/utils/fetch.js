@@ -1,10 +1,12 @@
+import { decamelizeKeys } from 'humps';
+
 export const jsonPostConfig = (body = {}) => ({
   method: 'post',
   headers: {
     'Accept': 'application/json',
     'Content-Type': 'application/json'
   },
-  body: JSON.stringify(body)
+  body: JSON.stringify(decamelizeKeys(body))
 });
 
 export const jsonPutConfig = (body = {}) => ({
@@ -13,7 +15,7 @@ export const jsonPutConfig = (body = {}) => ({
     'Accept': 'application/json',
     'Content-Type': 'application/json'
   },
-  body: JSON.stringify(body)
+  body: JSON.stringify(decamelizeKeys(body))
 });
 
 export const deleteConfig = () => ({

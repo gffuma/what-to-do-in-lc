@@ -1,4 +1,5 @@
 import fetch from 'isomorphic-fetch';
+import { camelizeKeys } from 'humps';
 import {
   SET_FB_ACCESS_TOKEN,
   OBTAIN_FB_ACCESS_TOKEN_REQUEST,
@@ -22,7 +23,7 @@ export function graphApi(endpoint, fetchConfig = {}) {
 
     return fetch(url, fetchConfig)
       .then(response =>
-        response.json().then(json => ({ json, response }))
+        response.json().then(json => ({ json: camelizeKeys(json), response }))
       )
       .then(({ json, response }) => {
         if (!response.ok) {

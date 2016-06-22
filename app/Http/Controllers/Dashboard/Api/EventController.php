@@ -65,12 +65,29 @@ class EventController extends Controller
 
         // Import new event...
         $this->validate($request, [
-            'fbid'         => 'required|max:100',
-            'name'         => 'required|max:255',
-            'cateogories'  => 'array',
-            'categories.*' => 'required|exists:categories,id'
+            'fbid'               => 'required|max:100',
+            'fb_attending_count' => 'integer',
+            'fb_cover_image_url' => 'url|max:255',
+            'name'               => 'required|max:255',
+            'latitude'           => 'numeric',
+            'longitude'          => 'numeric',
+            'country'            => 'max:100',
+            'city'               => 'max:100',
+            'street'             => 'max:255',
+            'zip'                => 'max:100',
+            'place_name'         => 'max:255',
+            'start_time'         => 'required|date',
+            'end_time'           => 'date',
+            'cateogories'        => 'array',
+            'categories.*'       => 'required|exists:categories,id'
         ]);
-        $newImportedEvent = Event::create($request->only('fbid', 'name', 'description'));
+        $newImportedEvent = Event::create($request->only(
+            'fbid', 'fb_attending_count', 'fb_cover_image_url',
+            'name', 'description',
+            'latitude', 'longitude',
+            'country', 'city', 'street', 'zip', 'place_name',
+            'start_time', 'end_time'
+        ));
 
         if ($request->has('categories')) {
             $newImportedEvent->categories()->sync($request->get('categories', []));
@@ -90,9 +107,26 @@ class EventController extends Controller
     {
         $event = Event::where('fbid', $fbid)->firstOrFail();
         $this->validate($request, [
-            'name' => 'required|max:255',
+            'fb_attending_count' => 'integer',
+            'fb_cover_image_url' => 'url|max:255',
+            'name'               => 'required|max:255',
+            'latitude'           => 'numeric',
+            'longitude'          => 'numeric',
+            'country'            => 'max:100',
+            'city'               => 'max:100',
+            'street'             => 'max:255',
+            'zip'                => 'max:100',
+            'place_name'         => 'max:255',
+            'start_time'         => 'required|date',
+            'end_time'           => 'date',
         ]);
-        $event->fill($request->only('name', 'description'));
+        $event->fill($request->only(
+            'fb_attending_count', 'fb_cover_image_url',
+            'name', 'description',
+            'latitude', 'longitude',
+            'country', 'city', 'street', 'zip', 'place_name',
+            'start_time', 'end_time'
+        ));
         $event->save();
         return $event->load('categories');
     }
@@ -145,11 +179,31 @@ class EventController extends Controller
     {
         $this->validate($request, [
             'fbid'         => 'required|unique:events|max:100',
-            'name'         => 'required|max:255',
+
+            // TODO: Check if this 2 fields make sense here...
+            'fb_attending_count' => 'integer',
+            'fb_cover_image_url' => 'url|max:255',
+
+            'name'               => 'required|max:255',
+            'latitude'           => 'numeric',
+            'longitude'          => 'numeric',
+            'country'            => 'max:100',
+            'city'               => 'max:100',
+            'street'             => 'max:255',
+            'zip'                => 'max:100',
+            'place_name'         => 'max:255',
+            'start_time'         => 'required|date',
+            'end_time'           => 'date',
             'cateogories'  => 'array',
             'categories.*' => 'required|exists:categories,id'
         ]);
-        $newEvent = Event::create($request->only('fbid', 'name', 'description'));
+        $newEvent = Event::create($request->only(
+            'fbid', 'fb_attending_count', 'fb_cover_image_url',
+            'name', 'description',
+            'latitude', 'longitude',
+            'country', 'city', 'street', 'zip', 'place_name',
+            'start_time', 'end_time'
+        ));
 
         if ($request->has('categories')) {
             $newEvent->categories()->sync($request->get('categories', []));
@@ -170,9 +224,29 @@ class EventController extends Controller
         $event = Event::findOrFail($id);
         $this->validate($request, [
             'fbid' => 'required|unique:events,fbid,'.$event->id.'|max:100',
-            'name' => 'required|max:255'
+
+            // TODO: Check if this 2 fields make sense here...
+            'fb_attending_count' => 'integer',
+            'fb_cover_image_url' => 'url|max:255',
+
+            'name'               => 'required|max:255',
+            'latitude'           => 'numeric',
+            'longitude'          => 'numeric',
+            'country'            => 'max:100',
+            'city'               => 'max:100',
+            'street'             => 'max:255',
+            'zip'                => 'max:100',
+            'place_name'         => 'max:255',
+            'start_time'         => 'required|date',
+            'end_time'           => 'date',
         ]);
-        $event->fill($request->only('fbid', 'name', 'description'));
+        $event->fill($request->only(
+            'fbid', 'fb_attending_count', 'fb_cover_image_url',
+            'name', 'description',
+            'latitude', 'longitude',
+            'country', 'city', 'street', 'zip', 'place_name',
+            'start_time', 'end_time'
+        ));
         $event->save();
         return $event->load('categories');
     }

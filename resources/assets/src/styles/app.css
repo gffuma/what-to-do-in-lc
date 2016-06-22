@@ -23,7 +23,18 @@
 .event-fb-id a {
   /*color: #3a5795;*/
   color: #d33682;
+  font-size: 0.7em;
+}
+.event-image {
+  margin-top: 10px;
+}
+.event-small-info {
+  margin-top: 10px;
   font-size: 0.8em;
+}
+.event-small-info div {
+  padding-top: 2px;
+  padding-bottom: 2px;
 }
 .event-description {
   margin-top: 5px;

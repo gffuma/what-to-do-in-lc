@@ -1,4 +1,5 @@
 import fetch from 'isomorphic-fetch';
+import { camelizeKeys } from 'humps';
 
 export function dashboardApi(endpoint, additionalConfig = {}) {
   return (dispatch, getState) => {
@@ -20,7 +21,7 @@ export function dashboardApi(endpoint, additionalConfig = {}) {
         if (response.status === 204) { // No Content
           return { json: null, response };
         }
-        return response.json().then(json => ({ json, response }));
+        return response.json().then(json => ({ json: camelizeKeys(json), response }));
       })
       .then(({ json, response }) => {
         if (!response.ok) {
