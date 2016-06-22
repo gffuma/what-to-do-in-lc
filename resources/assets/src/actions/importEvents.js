@@ -92,7 +92,7 @@ const importedEventsByFbIds = (fbids) => (dispatch, getState) =>
 // TODO: In a very far future we can get events from differte sources...
 const getFbIdsToImport = () => (dispatch, getState) => {
   // TODO: Maybe move in store!
-  const fbPageId = 'cosafarealecco'; // Hardcoded with endless love...
+  const fbPageId = 'ClementinoIenaWhite'; // Hardcoded with endless love...
   const importUrl = getState().importEvents.list.nextUrl || `/${fbPageId}/posts?fields=link`;
 
   return dispatch(graphApi(importUrl))
@@ -233,7 +233,8 @@ export function loadImportEvents() {
               .then(fbEvents => {
                   // Some ids could be invalid...
                   const importedFbIds = fbIdsToImport.filter(fbid =>
-                    entities.importedEvents[fbid] || fbEvents[fbid]
+                    (entities.importedEvents && entities.importedEvents[fbid] ) ||
+                    fbEvents[fbid]
                   );
                   // Finally can back to Itaca!
                   dispatch(mergeEntities({
