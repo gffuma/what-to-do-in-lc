@@ -1,10 +1,10 @@
 import React, { Component } from 'react'
 
-export default class HelloPage extends Component {
+export default class HomePage extends Component {
   render() {
     return (
       <div>
-        Bella Giova Ole
+        λ no si effects
       </div>
     );
   }

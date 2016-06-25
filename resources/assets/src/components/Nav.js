@@ -20,8 +20,8 @@ export default class Nav extends Component {
           </div>
           <div id="navbar" className="navbar-collapse collapse">
             <ul className="nav navbar-nav">
-              <NavLink to="/events">le Events</NavLink>
               <NavLink to="/import">Import</NavLink>
+              <NavLink to="/categories">Categories</NavLink>
             </ul>
           </div>
         </div>
