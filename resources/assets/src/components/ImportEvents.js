@@ -147,11 +147,23 @@ class ImportEventsControllers extends Component {
       <div className="panel panel-default">
         <div className="panel-heading"><span className="glyphicon glyphicon-console" aria-hidden="true"></span></div>
         <div className="panel-body">
-          <label>
-            <input type="checkbox" checked={showAlredyImportedEvents} onChange={(e) => {
-              showAlredyImportedEvents ? onHideAlredyImportedEvents() : onShowAlredyImportedEvents()
-            }} /> Show Alredy Imported Events ({alredyImportedCount})
-          </label>
+
+        <div className="form-group">
+          <input type="text" className="form-control input-lg" placeholder="Cerca negli eventi &#9889;"/>
+        </div>
+
+        <label>
+          <input type="checkbox" checked={showAlredyImportedEvents} onChange={(e) => {
+            showAlredyImportedEvents ? onHideAlredyImportedEvents() : onShowAlredyImportedEvents()
+          }} /> Show Alredy Imported Events ({alredyImportedCount})
+        </label>
+
+        <div>
+          <br />
+          <button className="btn btn-default btn-xs">
+            <span className="glyphicon glyphicon glyphicon-refresh" aria-hidden="true"></span> Reload
+          </button>
+        </div>
         </div>
       </div>
     );

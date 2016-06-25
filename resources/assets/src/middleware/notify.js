@@ -13,6 +13,7 @@ export default store => next => action => {
 
   const { message, options } = action.notify;
 
+  console.info(options);
   // Notify stuff with humane js
   humane.log(message, options);
 

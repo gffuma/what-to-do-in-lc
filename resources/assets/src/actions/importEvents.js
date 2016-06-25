@@ -1,8 +1,10 @@
 import { normalize } from 'normalizr';
-import { graphApi } from './fb';
-import { dashboardApi } from './laravel';
-import { jsonPostConfig, deleteConfig, jsonPutConfig } from '../utils/fetch';
-import { property, difference, uniq, omit, flow, pick, get, mapKeys, mapValues } from 'lodash';
+import invariant from 'invariant';
+import { graphApi, handleFbError } from './fb';
+import { dashboardApi, handleDashError } from './laravel';
+import { makeAsyncActions } from './actionsMaker';
+import { jsonPostConfig, deleteConfig, jsonPutConfig } from '../utils/http';
+import { property, difference, uniq, omit, pick, get, mapKeys, mapValues } from 'lodash';
 import { mergeEntities, removeEntities } from './entities';
 import Schemas from '../schemas';
 import {
@@ -33,24 +35,6 @@ const grabFbEventsIdsFromLinks = (links) => links.reduce((r, v) => {
   return matches ? [...r, matches[1]] : r;
 }, []);
 
-// Error handling...
-// TODO: Imporve error handling
-const makeHandleFbError = (type, data = {}) => (r) => (dispatch, getState) => dispatch({
-  ...data,
-  type,
-  error: r.error ? `Mark Says ${r.error}` : r
-});
-
-const makeHandleDashError = (type, data = {}) => (r) => (dispatch, getState) => dispatch({
-  ...data,
-  type,
-  error: r.error || r
-});
-
-const err = (error) => {
-  throw new Error(error);
-};
-
 // Normalize stuff...
 
 const normalizeImportEvent = (event) => {
@@ -63,7 +47,6 @@ const normalizeImportEvents = (events) => {
   return { fbIds: result, entities };
 };
 
-
 // Convert graph API facebook event to imported event...
 const transformGraphFbEvent = (e) => ({
   fbid: e.id,
@@ -73,11 +56,8 @@ const transformGraphFbEvent = (e) => ({
   ...get(e, 'place.location', {}),
   ...pick(e, ['name', 'description', 'startTime', 'endTime'])
 });
-//const transformGraphFbEvent = (fbEvent) => flow(
-  //e => mapKeys(e, (v, k) => k === 'id' ? 'fbid' : k),
-  //e => pick(e, ['fbid', 'name', 'description', 'categories', 'start_time', 'type'])
-//)(fbEvent);
 
+// Facebook event fields to pick for import...
 const fbEventFields = ['name', 'description', 'start_time', 'end_time',
   'cover', 'place', 'attending_count'];
 
@@ -127,14 +107,18 @@ const getFbIdsToImport = () => (dispatch, getState) => {
 export function reSyncImportedEvent(fbid) {
   return (dispatch, getState) => {
     const importedEvent = getState().entities.importedEvents[fbid];
+    invariant(importedEvent, `Invalid provided facebook id ${fbid} to remove.`);
 
-    !importedEvent && err(`Invalid provided facebook id ${fbid} to resync.`);
+    const [ start, complete, fail ] = makeAsyncActions({
+      types: [
+        RESYNC_IMPORTED_EVENT_START,
+        RESYNC_IMPORTED_EVENT_COMPLETE,
+        RESYNC_IMPORTED_EVENT_FAILURE
+      ],
+      data: { fbid }
+    });
 
-    const handleFbError = makeHandleFbError(RESYNC_IMPORTED_EVENT_FAILURE, { fbid });
-    const handleDashError = makeHandleDashError(RESYNC_IMPORTED_EVENT_FAILURE, { fbid });
-
-    dispatch({ type: RESYNC_IMPORTED_EVENT_START, fbid });
-
+    dispatch(start());
     dispatch(fbEventById(fbid))
       .then(fbEvent => {
         dispatch(dashboardApi(`/events/fb/${fbid}`, jsonPutConfig(fbEvent)))
@@ -143,9 +127,9 @@ export function reSyncImportedEvent(fbid) {
               ...normalizeImportEvent(event).entities,
               fbEvents: { [fbid]: fbEvent }
             }));
-            dispatch({ type: RESYNC_IMPORTED_EVENT_COMPLETE, fbid });
-          }, (r) => dispatch(handleDashError(r)));
-      }, (r) => dispatch(handleFbError(r)));
+            dispatch(complete());
+          }, (r) => dispatch(fail(handleDashError(r))));
+      }, (r) => dispatch(fail(handleFbError(r))));
   };
 };
 
@@ -153,14 +137,18 @@ export function reSyncImportedEvent(fbid) {
 export function deleteImportedEvent(fbid) {
   return (dispatch, getState) => {
     const importedEvent = getState().entities.importedEvents[fbid];
+    invariant(importedEvent, `Invalid provided facebook id ${fbid} to remove.`);
 
-    !importedEvent && err(`Invalid provided facebook id ${fbid} to remove.`);
+    const [ start, complete, fail ] = makeAsyncActions({
+      types: [
+        DELETE_IMPORTED_EVENT_START,
+        DELETE_IMPORTED_EVENT_COMPLETE,
+        DELETE_IMPORTED_EVENT_FAILURE
+      ],
+      data: { fbid }
+    });
 
-    const handleFbError = makeHandleFbError(DELETE_IMPORTED_EVENT_FAILURE, { fbid });
-    const handleDashError = makeHandleDashError(DELETE_IMPORTED_EVENT_FAILURE, { fbid });
-
-    dispatch({ type: DELETE_IMPORTED_EVENT_START, fbid });
-
+    dispatch(start());
     dispatch(promiseForFreshFbEventById(fbid))
       .then(fbEvent => {
         // Delete from imported events...
@@ -173,9 +161,9 @@ export function deleteImportedEvent(fbid) {
             dispatch(removeEntities({
               importedEvents: fbid
             }));
-            dispatch({ type: DELETE_IMPORTED_EVENT_COMPLETE, fbid });
-          }, (r) => dispatch(handleDashError(r)));
-      }, (r) => dispatch(handleFbError(r)));
+            dispatch(complete());
+          }, (r) => dispatch(fail(handleDashError(r))));
+      }, (r) => dispatch(fail(handleFbError(r))));
   };
 };
 
@@ -183,20 +171,25 @@ export function deleteImportedEvent(fbid) {
 export function importEvent(fbid) {
   return (dispatch, getState) => {
     const fbEvent = getState().entities.fbEvents[fbid];
+    invariant(fbEvent, `Invalid provided facebook id ${fbid} to import.`);
 
-    !fbEvent && err(`Invalid provided facebook id ${fbid} to import.`);
+    const [ start, complete, fail ] = makeAsyncActions({
+      types: [
+        IMPORT_EVENT_START,
+        IMPORT_EVENT_COMPLETE,
+        IMPORT_EVENT_FAILURE
+      ],
+      data: { fbid }
+    });
 
-    const handleDashError = makeHandleDashError(IMPORT_EVENT_FAILURE, { fbid });
-
-    dispatch({ type: IMPORT_EVENT_START, fbid });
-
+    dispatch(start());
     dispatch(dashboardApi(`/events/fb`, jsonPostConfig(fbEvent)))
       .then(event => {
         dispatch(mergeEntities({
           ...normalizeImportEvent(event).entities
         }));
-        dispatch({ type: IMPORT_EVENT_COMPLETE, fbid });
-      }, (r) => dispatch(handleDashError(r)));
+        dispatch(complete());
+      }, (r) => dispatch(fail(handleDashError(r))));
   };
 }
 
@@ -204,22 +197,21 @@ export function importEvent(fbid) {
 export function loadImportEvents() {
   return (dispatch, getState) => {
     // Start the odissea
+    const [ start, complete, fail ] = makeAsyncActions({
+      types: [
+        LOAD_IMPORT_EVENTS_START,
+        LOAD_IMPORT_EVENTS_COMPLETE,
+        LOAD_IMPORT_EVENTS_FAILURE
+      ]
+    });
 
-    const handleFbError = makeHandleFbError(LOAD_IMPORT_EVENTS_FAILURE);
-    const handleDashError = makeHandleDashError(LOAD_IMPORT_EVENTS_FAILURE);
-
-    dispatch({ type: LOAD_IMPORT_EVENTS_START });
-
+    dispatch(start());
     dispatch(getFbIdsToImport())
       .then(({ fbIdsToImport, paging }) => {
 
         // No new events posted by page... Import complete!
         if (fbIdsToImport.length === 0) {
-          dispatch({
-            paging,
-            type: LOAD_IMPORT_EVENTS_COMPLETE,
-            ids: fbIdsToImport
-          });
+          dispatch(complete({ paging, ids: fbIdsToImport }));
           return;
         }
 
@@ -232,11 +224,7 @@ export function loadImportEvents() {
               dispatch(mergeEntities({
                 ...entities
               }));
-              dispatch({
-                paging,
-                type: LOAD_IMPORT_EVENTS_COMPLETE,
-                ids: fbIdsToImport
-              });
+              dispatch(complete({ paging, ids: fbIdsToImport }));
               return;
             }
 
@@ -252,14 +240,10 @@ export function loadImportEvents() {
                     fbEvents,
                     ...entities
                   }));
-                  dispatch({
-                    paging,
-                    type: LOAD_IMPORT_EVENTS_COMPLETE,
-                    ids: importedFbIds
-                  });
-              }, (r) => dispatch(handleFbError(r)));
-          }, (r) => dispatch(handleDashError(r)));
-      }, (r) => dispatch(handleFbError(r)));
+                  dispatch(complete({ paging, ids: importedFbIds }));
+              }, (r) => dispatch(fail(handleFbError(r))));
+          }, (r) => dispatch(fail(handleDashError(r))));
+      }, (r) => dispatch(fail(handleFbError(r))));
   };
 }
 
