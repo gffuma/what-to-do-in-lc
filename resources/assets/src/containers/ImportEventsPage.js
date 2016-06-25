@@ -7,6 +7,7 @@ import {
 } from '../selectors/importEvents';
 import {
   loadImportEvents,
+  loadImportEventsFirstTime,
   importEvent,
   deleteImportedEvent,
   reSyncImportedEvent,
@@ -18,7 +19,7 @@ import {
 
 class ImportEventsPage extends React.Component {
   componentWillMount() {
-    this.props.loadImportEvents();
+    this.props.loadImportEventsFirstTime();
   }
 
   render() {
@@ -26,6 +27,7 @@ class ImportEventsPage extends React.Component {
       events,
       alredyImportedCount,
       loading,
+      receivedAt,
       canLoadMoreEvents,
       importEvent,
       reSyncImportedEvent,
@@ -41,6 +43,7 @@ class ImportEventsPage extends React.Component {
     return (
       <ImportEvents
         events={events}
+        receivedAt={receivedAt}
         alredyImportedCount={alredyImportedCount}
         loading={loading}
         canLoadMoreEvents={canLoadMoreEvents}
@@ -61,12 +64,13 @@ class ImportEventsPage extends React.Component {
 
 function mapStateToProps(state) {
   const { filters } = state.importEvents;
-  const { loading, nextUrl } = state.importEvents.list;
+  const { loading, nextUrl, receivedAt } = state.importEvents.list;
 
   return {
     events: getImportEvents(state),
     alredyImportedCount: countAlredyImportedEvents(state) ,
     canLoadMoreEvents: !!nextUrl,
+    receivedAt,
     loading,
     filters,
   };
@@ -74,6 +78,7 @@ function mapStateToProps(state) {
 
 export default connect(mapStateToProps, {
   loadImportEvents,
+  loadImportEventsFirstTime,
   importEvent,
   reSyncImportedEvent,
   deleteImportedEvent,

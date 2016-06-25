@@ -133,10 +133,11 @@ const LoadMoreEventsBtn = (props) => (
   </button>
 );
 
-class ImportEventsControllers extends Component {
+class ImportEventsControls extends Component {
 
   render() {
     const {
+      receivedAt,
       showAlredyImportedEvents,
       alredyImportedCount,
       onShowAlredyImportedEvents,
@@ -158,12 +159,12 @@ class ImportEventsControllers extends Component {
           }} /> Show Alredy Imported Events ({alredyImportedCount})
         </label>
 
-        <div>
+        {/*<div>
           <br />
           <button className="btn btn-default btn-xs">
             <span className="glyphicon glyphicon glyphicon-refresh" aria-hidden="true"></span> Reload
           </button>
-        </div>
+        </div>*/}
         </div>
       </div>
     );
@@ -176,6 +177,7 @@ export default class ImportEvents extends Component {
       events,
       alredyImportedCount,
       loading,
+      receivedAt,
       canLoadMoreEvents,
       onLoadMoreEvents,
       showAlredyImportedEvents,
@@ -190,7 +192,8 @@ export default class ImportEvents extends Component {
 
     return (
       <div>
-        <ImportEventsControllers
+        <ImportEventsControls
+          receivedAt={receivedAt}
           alredyImportedCount={alredyImportedCount}
           showAlredyImportedEvents={showAlredyImportedEvents}
           onShowAlredyImportedEvents={onShowAlredyImportedEvents}

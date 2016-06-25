@@ -193,6 +193,15 @@ export function importEvent(fbid) {
   };
 }
 
+// Load events only if no receivedAt
+export function loadImportEventsFirstTime() {
+  return (dispatch, getState) => {
+    if (!getState().importEvents.list.receivedAt) {
+      dispatch(loadImportEvents());
+    }
+  };
+};
+
 // Load events for importing later...
 export function loadImportEvents() {
   return (dispatch, getState) => {
@@ -211,7 +220,7 @@ export function loadImportEvents() {
 
         // No new events posted by page... Import complete!
         if (fbIdsToImport.length === 0) {
-          dispatch(complete({ paging, ids: fbIdsToImport }));
+          dispatch(complete({ paging, ids: fbIdsToImport, receivedAt: Date.now() }));
           return;
         }
 
@@ -224,7 +233,7 @@ export function loadImportEvents() {
               dispatch(mergeEntities({
                 ...entities
               }));
-              dispatch(complete({ paging, ids: fbIdsToImport }));
+              dispatch(complete({ paging, ids: fbIdsToImport, receivedAt: Date.now() }));
               return;
             }
 
@@ -240,7 +249,7 @@ export function loadImportEvents() {
                     fbEvents,
                     ...entities
                   }));
-                  dispatch(complete({ paging, ids: importedFbIds }));
+                  dispatch(complete({ paging, ids: importedFbIds, receivedAt: Date.now() }));
               }, (r) => dispatch(fail(handleFbError(r))));
           }, (r) => dispatch(fail(handleDashError(r))));
       }, (r) => dispatch(fail(handleFbError(r))));

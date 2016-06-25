@@ -10,10 +10,11 @@ const initialState = {
   loading: false,
   error: null,
   nextUrl: null,
+  receivedAt: null,
 };
 
 export default function importEventsList(state = initialState, action) {
-  const { type, ids, paging, error } = action;
+  const { type, ids, paging, error, receivedAt } = action;
 
   switch (type) {
     case LOAD_IMPORT_EVENTS_START:
@@ -25,6 +26,7 @@ export default function importEventsList(state = initialState, action) {
     case LOAD_IMPORT_EVENTS_COMPLETE:
       return {
         ...state,
+        receivedAt,
         ids: uniq(concat(state.ids, ids)),
         nextUrl: paging.next,
         loading: false
