@@ -11,6 +11,7 @@
   /*background-color: #ba2121;*/
 }
 .event.saving {
+  pointer-events: none;
   opacity: 0.6;
 }
 
@@ -37,7 +38,7 @@
   padding-bottom: 2px;
 }
 .event-description {
-  margin-top: 5px;
+  margin-top: 15px;
   font-size: 11px;
   white-space: pre-wrap;
 }
@@ -62,8 +63,13 @@
   /*background-color: #fdf6e3;*/
   /*border-bottom: 1px solid #eee;*/
 }
+.event-categories .category-checkbox {
+  float: left;
+  font-size: 12px;
+  padding: 2px;
+}
 .event-body {
-  padding: 10px 15px;
+  padding: 0px 15px;
 }
 
 .event-actions button {

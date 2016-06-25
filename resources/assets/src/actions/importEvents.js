@@ -4,7 +4,7 @@ import { graphApi, handleFbError } from './fb';
 import { dashboardApi, handleDashError } from './laravel';
 import { makeAsyncActions } from './actionsMaker';
 import { jsonPostConfig, deleteConfig, jsonPutConfig } from '../utils/http';
-import { property, difference, uniq, omit, pick, get, mapKeys, mapValues } from 'lodash';
+import { property, difference, uniq, set, without, pick, get, mapKeys, mapValues } from 'lodash';
 import { mergeEntities, removeEntities } from './entities';
 import Schemas from '../schemas';
 import {
@@ -23,7 +23,13 @@ import {
   DELETE_IMPORTED_EVENT_FAILURE,
   RESYNC_IMPORTED_EVENT_START,
   RESYNC_IMPORTED_EVENT_COMPLETE,
-  RESYNC_IMPORTED_EVENT_FAILURE
+  RESYNC_IMPORTED_EVENT_FAILURE,
+  ADD_CATEGORY_TO_EVENT_REQUEST,
+  ADD_CATEGORY_TO_EVENT_SUCCESS,
+  ADD_CATEGORY_TO_EVENT_FAILURE,
+  REMOVE_CATEGORY_FROM_EVENT_REQUEST,
+  REMOVE_CATEGORY_FROM_EVENT_SUCCESS,
+  REMOVE_CATEGORY_FROM_EVENT_FAILURE
 } from '../constants/ActionTypes';
 
 // Grab facebook events ids from links in reponse
@@ -54,7 +60,8 @@ const transformGraphFbEvent = (e) => ({
   fbCoverImageUrl: get(e, 'cover.source'),
   placeName: get(e, 'place.name'),
   ...get(e, 'place.location', {}),
-  ...pick(e, ['name', 'description', 'startTime', 'endTime'])
+  ...pick(e, ['name', 'description', 'startTime', 'endTime']),
+  categories: []
 });
 
 // Facebook event fields to pick for import...
@@ -71,12 +78,10 @@ const fbEventById = (fbid) => (dispatch, getState) =>
 
 const promiseForFreshFbEventById = (fbid) => (dispatch, getState) => {
   const fbEvent = getState().entities.fbEvents[fbid];
-  return fbEvent
-     // Cached fb event without shit...
-    ? Promise.resolve(omit(fbEvent, ['categories']))
-    // Ask to Mark...
-    : dispatch(fbEventById(fbid));
+  return Promise.resolve(fbEvent || dispatch(fbEventById(fbid)));
 };
+
+const resetEventCategories = (e) => set(e, 'categories', []);
 
 const importedEventsByFbIds = (fbids) => (dispatch, getState) =>
   dispatch(dashboardApi(`/events/fb?fbids=${fbids.join(',')}`))
@@ -103,6 +108,94 @@ const getFbIdsToImport = () => (dispatch, getState) => {
     });
 };
 
+export function addCategoryToEvent(fbid, categoryId) {
+  return (dispatch, getState) => {
+    invariant(getState().categories.list.ids.indexOf(categoryId) !== -1,
+      `Invalid category ${categoryId}`);
+    const importedEvent = getState().entities.importedEvents[fbid];
+    if (importedEvent) {
+      const [ request, success, fail ] = makeAsyncActions({
+        types: [
+          ADD_CATEGORY_TO_EVENT_REQUEST,
+          ADD_CATEGORY_TO_EVENT_SUCCESS,
+          ADD_CATEGORY_TO_EVENT_FAILURE
+        ],
+        data: { fbid }
+      });
+      dispatch(request());
+      dispatch(dashboardApi(`/events/${importedEvent.id}/categories`, jsonPostConfig({
+        categories: [categoryId]
+      })))
+      .then(() => {
+        dispatch(mergeEntities({
+          importedEvents: {
+            [fbid]: {
+              ...importedEvent,
+              categories: [...importedEvent.categories, categoryId]
+            }
+          }
+        }));
+        dispatch(success());
+      }, (r) => dispatch(fail(handleDashError(r))))
+    } else {
+      // Simply add category to entities of facebook event
+      const fbEvent = getState().entities.fbEvents[fbid];
+      invariant(fbEvent, `Invalid facebook id ${fbid} for adding category`);
+      dispatch(mergeEntities({
+        fbEvents: {
+          [fbid]: {
+            ...fbEvent,
+            categories: [...fbEvent.categories, categoryId]
+          }
+        }
+      }));
+    }
+  };
+};
+
+export function removeCategoryFromEvent(fbid, categoryId) {
+  return (dispatch, getState) => {
+    invariant(getState().categories.list.ids.indexOf(categoryId) !== -1,
+      `Invalid category ${categoryId}`);
+    const importedEvent = getState().entities.importedEvents[fbid];
+    if (importedEvent) {
+      const [ request, success, fail ] = makeAsyncActions({
+        types: [
+          REMOVE_CATEGORY_FROM_EVENT_REQUEST,
+          REMOVE_CATEGORY_FROM_EVENT_SUCCESS,
+          REMOVE_CATEGORY_FROM_EVENT_FAILURE
+        ],
+        data: { fbid }
+      });
+      dispatch(request());
+      dispatch(dashboardApi(`/events/${importedEvent.id}/categories/${categoryId}`, deleteConfig()))
+      .then(() => {
+        dispatch(mergeEntities({
+          importedEvents: {
+            [fbid]: {
+              ...importedEvent,
+              categories: without(importedEvent.categories, categoryId)
+            }
+          }
+        }));
+        dispatch(success());
+      }, (r) => dispatch(fail(handleDashError(r))))
+    } else {
+      // Simply remove category to entities of facebook event
+      const fbEvent = getState().entities.fbEvents[fbid];
+      invariant(fbEvent, `Invalid facebook id ${fbid} for removing category`);
+      dispatch(mergeEntities({
+        fbEvents: {
+          [fbid]: {
+            ...fbEvent,
+            categories: without(fbEvent.categories, categoryId)
+          }
+        }
+      }));
+    }
+  };
+};
+
 // ReSync imported event with facebook
 export function reSyncImportedEvent(fbid) {
   return (dispatch, getState) => {
@@ -119,7 +212,7 @@ export function reSyncImportedEvent(fbid) {
     });
 
     dispatch(start());
-    dispatch(fbEventById(fbid))
+    dispatch(fbEventById(fbid)).then(e => resetEventCategories(e))
       .then(fbEvent => {
         dispatch(dashboardApi(`/events/fb/${fbid}`, jsonPutConfig(fbEvent)))
           .then(event => {
@@ -149,7 +242,7 @@ export function deleteImportedEvent(fbid) {
     });
 
     dispatch(start());
-    dispatch(promiseForFreshFbEventById(fbid))
+    dispatch(promiseForFreshFbEventById(fbid)).then(e => resetEventCategories(e))
       .then(fbEvent => {
         // Delete from imported events...
         dispatch(dashboardApi(`/events/fb/${fbid}`, deleteConfig()))

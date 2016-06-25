@@ -26,10 +26,27 @@ const getImportEventsFiltered = createSelector(
   ))
 );
 
+const getCategoriesIds = (state) => state.categories.list.ids;
+const getCategoriesEntity = (state) => state.entities.categories;
+
+const getImporEventsWithCategories = createSelector(
+  [ getImportEventsFiltered, getCategoriesIds, getCategoriesEntity ],
+  (events, categoriesIds, cateogriesEntity) => events.map(event => {
+    const categories = categoriesIds.map(categoryId => ({
+      ...cateogriesEntity[categoryId],
+      imported: event.categories.indexOf(categoryId) !== -1
+    }));
+    return {
+      ...event,
+      categories
+    };
+  })
+);
+
 const getImportEventsUI = (state) => state.importEvents.ui;
 
 export const getImportEvents = createSelector(
-  [ getImportEventsFiltered, getImportEventsUI ],
+  [ getImporEventsWithCategories, getImportEventsUI ],
   (events, ui) => events.map(event => {
     const e = { ...event };
 
@@ -37,16 +54,18 @@ export const getImportEvents = createSelector(
       importing: ui.importing[e.fbid],
       deleting: ui.deleting[e.fbid],
       resync: ui.resync[e.fbid],
+      savingCategories: ui.savingCategories[e.fbid],
       showFullDescription: ui.showFullDescription[e.fbid],
     }, {
       importing: false,
       deleting: false,
       resync: false,
+      savingCategories: false,
       showFullDescription: false,
     });
 
     e.ui.hasLongDescription = e.description && e.description.length > 250;
-    e.ui.saving = e.ui.importing || e.ui.deleting || e.ui.resync;
+    e.ui.saving = e.ui.importing || e.ui.deleting || e.ui.resync || e.ui.savingCategories;
 
     // Truncate description when is too long and cannot want to is it full
     if (e.ui.hasLongDescription && !e.ui.showFullDescription) {

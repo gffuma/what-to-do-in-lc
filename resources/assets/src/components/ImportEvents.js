@@ -13,12 +13,15 @@ class EventItem extends Component {
       onEventDeleted,
       onEventResync,
       onShowFullDescription,
-      onShowLessDescription
+      onShowLessDescription,
+      onCategoryAdded,
+      onCategoryRemoved,
     } = this.props;
     const {
       ui: {
         deleting,
         saving,
+        savingCategories,
         importing,
         hasLongDescription,
         showFullDescription,
@@ -28,9 +31,12 @@ class EventItem extends Component {
     const eventClass = classNames('list-group-item event', {
       imported,
       saving,
+      savingCategories,
       deleting,
       importing,
     });
+    // TODO: Check if maybe can load only categories
+    const eventCategoriesClass = classNames('event-categories');
 
     return (
       <div className={eventClass}>
@@ -105,6 +111,28 @@ class EventItem extends Component {
         </div>
 
         <div className="event-body">
+
+          <div className={eventCategoriesClass}>
+            {event.categories.map(category => (
+              <div key={category.id} className="category-checkbox">
+                <div className="checkbox">
+                  <label>
+                    <input
+                      type="checkbox"
+                      onChange={() =>
+                        category.imported
+                          ? onCategoryRemoved(event.fbid, category.id)
+                          : onCategoryAdded(event.fbid, category.id)
+                      }
+                      checked={category.imported} />
+                    {category.description}
+                  </label>
+                </div>
+              </div>
+             ))}
+          </div>
+          <div className="clearfix" />
+
           <div className="event-description">{event.description}</div>
           {(hasLongDescription && !showFullDescription) &&
             <div
@@ -187,7 +215,9 @@ export default class ImportEvents extends Component {
       onShowFullDescription,
       onShowLessDescription,
       onShowAlredyImportedEvents,
-      onHideAlredyImportedEvents
+      onHideAlredyImportedEvents,
+      onCategoryAdded,
+      onCategoryRemoved,
     } =  this.props;
 
     return (
@@ -206,6 +236,8 @@ export default class ImportEvents extends Component {
               event={event}
               onShowFullDescription={onShowFullDescription}
               onShowLessDescription={onShowLessDescription}
+              onCategoryAdded={onCategoryAdded}
+              onCategoryRemoved={onCategoryRemoved}
               onEventDeleted={onEventDeleted}
               onEventResync={onEventResync}
               onEventImported={onEventImported}

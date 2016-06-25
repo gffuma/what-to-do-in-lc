@@ -16,7 +16,7 @@ export function dashboardApi(endpoint, additionalConfig = {}) {
     };
 
     return fetch(url, fetchConfig)
-      .then(handleFetchSuccess, handleFetchError);
+      .then(handleFetchSuccess, handleFetchError)
   };
 };
 

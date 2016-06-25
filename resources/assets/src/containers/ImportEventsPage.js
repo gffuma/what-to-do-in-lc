@@ -14,11 +14,17 @@ import {
   showFullDescription,
   showLessDescription,
   showAlredyImportedEvents,
-  hideAlredyImportedEvents
+  hideAlredyImportedEvents,
+  addCategoryToEvent,
+  removeCategoryFromEvent
 } from '../actions/importEvents';
+import {
+  loadCategories
+} from '../actions/categories';
 
 class ImportEventsPage extends React.Component {
   componentWillMount() {
+    this.props.loadCategories();
     this.props.loadImportEventsFirstTime();
   }
 
@@ -37,6 +43,8 @@ class ImportEventsPage extends React.Component {
       showLessDescription,
       showAlredyImportedEvents,
       hideAlredyImportedEvents,
+      addCategoryToEvent,
+      removeCategoryFromEvent,
       filters
     } = this.props;
 
@@ -56,6 +64,8 @@ class ImportEventsPage extends React.Component {
         onShowLessDescription={showLessDescription}
         onShowAlredyImportedEvents={showAlredyImportedEvents}
         onHideAlredyImportedEvents={hideAlredyImportedEvents}
+        onCategoryAdded={addCategoryToEvent}
+        onCategoryRemoved={removeCategoryFromEvent}
       />
     );
   }
@@ -86,4 +96,7 @@ export default connect(mapStateToProps, {
   showLessDescription,
   showAlredyImportedEvents,
   hideAlredyImportedEvents,
+  loadCategories,
+  addCategoryToEvent,
+  removeCategoryFromEvent,
 })(ImportEventsPage);
