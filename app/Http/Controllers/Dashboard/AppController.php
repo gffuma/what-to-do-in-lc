@@ -6,6 +6,7 @@ use Illuminate\Http\Request;
 
 use App\Http\Requests;
 use App\Http\Controllers\Controller;
+use Auth;
 
 class AppController extends Controller
 {
@@ -27,7 +28,8 @@ class AppController extends Controller
             ],
             'laravel' => [
                 'csrfToken' => csrf_token()
-            ]
+            ],
+            'user' => Auth::user(),
         ];
 
         // Webpack bundle
