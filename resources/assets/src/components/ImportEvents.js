@@ -100,8 +100,8 @@ class EventItem extends Component {
             <div>
               <span className="glyphicon glyphicon-time" aria-hidden="true"></span>
               {' '}
-              {moment(event.startTime).format('dddd M MMMM HH:mm')}
-              {event.endTime && <span>{' - '}{moment(event.endTime).format('dddd M MMMM HH:mm')}</span>}
+              {moment(event.startTime).format('dddd D MMMM HH:mm')}
+              {event.endTime && <span>{' - '}{moment(event.endTime).format('dddd D MMMM HH:mm')}</span>}
             </div>
             <span>
               <span className="glyphicon glyphicon-user" aria-hidden="true"></span>
