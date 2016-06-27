@@ -34,8 +34,8 @@
     </nav>
 
     <div class="container">
-      @for ($i = 0; $i < rand(3, 60); $i++)
-        &#128640;
+      @for ($i = 0; $i < $thunders; $i++)
+        &#9889;
       @endfor
     </div>
   </div>
