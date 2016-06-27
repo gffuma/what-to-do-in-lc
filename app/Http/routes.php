@@ -55,6 +55,7 @@ Route::group(['domain' => env('DASHBOARD_DOMAIN'), 'namespace' => 'Dashboard'], 
 });
 
 // Frontend
-Route::get('/', function() {
-    return view('welcome');
-});
+Route::get('/', 'HomeController@showIndex');
+Route::get('/_-_', 'EventController@showSecrets');
+//Route::get('/{category}', 'CategoryController@showIndexCategory');
+//Route::get('/{category}/weekend', 'CategoryController@showCategoryInWeekend');
