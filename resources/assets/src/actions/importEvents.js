@@ -87,11 +87,8 @@ const importedEventsByFbIds = (fbids) => (dispatch, getState) =>
   dispatch(dashboardApi(`/events/fb?fbids=${fbids.join(',')}`))
     .then(normalizeImportEvents);
 
-// TODO: In a very far future we can get events from differte sources...
-const getFbIdsToImport = () => (dispatch, getState) => {
-  // TODO: Maybe move in store!
-  const fbPageId = 'cosafarealecco'; // Hardcoded with endless love...
-  const importUrl = getState().importEvents.list.nextUrl || `/${fbPageId}/posts?fields=link&pretty=0`;
+const getFbIdsToImport = (fbSourceId) => (dispatch, getState) => {
+  const importUrl = getState().importEvents[fbSourceId].list.nextUrl || `/${fbSourceId}/posts?fields=link&pretty=0`;
 
   return dispatch(graphApi(importUrl))
     .then(response => {
@@ -108,11 +105,12 @@ const getFbIdsToImport = () => (dispatch, getState) => {
     });
 };
 
-export function addCategoryToEvent(fbid, categoryId) {
+export const addCategoryToEvent = (fbSourceId, fbid, categoryId) => {
   return (dispatch, getState) => {
     invariant(getState().categories.list.ids.indexOf(categoryId) !== -1,
       `Invalid category ${categoryId}`);
     const importedEvent = getState().entities.importedEvents[fbid];
+
     if (importedEvent) {
       const [ request, success, fail ] = makeAsyncActions({
         types: [
@@ -120,8 +118,9 @@ export function addCategoryToEvent(fbid, categoryId) {
           ADD_CATEGORY_TO_EVENT_SUCCESS,
           ADD_CATEGORY_TO_EVENT_FAILURE
         ],
-        data: { fbid }
+        data: { fbSourceId, fbid }
       });
+
       dispatch(request());
       dispatch(dashboardApi(`/events/${importedEvent.id}/categories`, jsonPostConfig({
         categories: [categoryId]
@@ -153,11 +152,12 @@ export function addCategoryToEvent(fbid, categoryId) {
   };
 };
 
-export function removeCategoryFromEvent(fbid, categoryId) {
+export const removeCategoryFromEvent = (fbSourceId, fbid, categoryId) => {
   return (dispatch, getState) => {
     invariant(getState().categories.list.ids.indexOf(categoryId) !== -1,
       `Invalid category ${categoryId}`);
     const importedEvent = getState().entities.importedEvents[fbid];
+
     if (importedEvent) {
       const [ request, success, fail ] = makeAsyncActions({
         types: [
@@ -165,8 +165,9 @@ export function removeCategoryFromEvent(fbid, categoryId) {
           REMOVE_CATEGORY_FROM_EVENT_SUCCESS,
           REMOVE_CATEGORY_FROM_EVENT_FAILURE
         ],
-        data: { fbid }
+        data: { fbSourceId, fbid }
       });
+
       dispatch(request());
       dispatch(dashboardApi(`/events/${importedEvent.id}/categories/${categoryId}`, deleteConfig()))
       .then(() => {
@@ -197,7 +198,7 @@ export function removeCategoryFromEvent(fbid, categoryId) {
 };
 
 // ReSync imported event with facebook
-export function reSyncImportedEvent(fbid) {
+export const reSyncImportedEvent = (fbSourceId, fbid) => {
   return (dispatch, getState) => {
     const importedEvent = getState().entities.importedEvents[fbid];
     invariant(importedEvent, `Invalid provided facebook id ${fbid} to remove.`);
@@ -208,7 +209,7 @@ export function reSyncImportedEvent(fbid) {
         RESYNC_IMPORTED_EVENT_COMPLETE,
         RESYNC_IMPORTED_EVENT_FAILURE
       ],
-      data: { fbid }
+      data: { fbid, fbSourceId }
     });
 
     dispatch(start());
@@ -227,7 +228,7 @@ export function reSyncImportedEvent(fbid) {
 };
 
 // Delete imported event
-export function deleteImportedEvent(fbid) {
+export const deleteImportedEvent = (fbSourceId, fbid) => {
   return (dispatch, getState) => {
     const importedEvent = getState().entities.importedEvents[fbid];
     invariant(importedEvent, `Invalid provided facebook id ${fbid} to remove.`);
@@ -238,7 +239,7 @@ export function deleteImportedEvent(fbid) {
         DELETE_IMPORTED_EVENT_COMPLETE,
         DELETE_IMPORTED_EVENT_FAILURE
       ],
-      data: { fbid }
+      data: { fbSourceId, fbid }
     });
 
     dispatch(start());
@@ -261,7 +262,7 @@ export function deleteImportedEvent(fbid) {
 };
 
 // Import event
-export function importEvent(fbid) {
+export const importEvent = (fbSourceId, fbid) => {
   return (dispatch, getState) => {
     const fbEvent = getState().entities.fbEvents[fbid];
     invariant(fbEvent, `Invalid provided facebook id ${fbid} to import.`);
@@ -272,7 +273,7 @@ export function importEvent(fbid) {
         IMPORT_EVENT_COMPLETE,
         IMPORT_EVENT_FAILURE
       ],
-      data: { fbid }
+      data: { fbSourceId, fbid }
     });
 
     dispatch(start());
@@ -284,20 +285,20 @@ export function importEvent(fbid) {
         dispatch(complete());
       }, (r) => dispatch(fail(handleDashError(r))));
   };
-}
+};
 
 // Load events only if no receivedAt
-export function loadImportEventsFirstTime() {
+export const loadImportEventsFirstTime = (fbSourceId) => {
   return (dispatch, getState) => {
-    const list = getState().importEvents.list;
+    const list = (getState().importEvents[fbSourceId] || {}).list || {};
     if (!list.receivedAt && !list.loading) {
-      dispatch(loadImportEvents());
+      dispatch(loadImportEvents(fbSourceId));
     }
   };
 };
 
 // Load events for importing later...
-export function loadImportEvents() {
+export const loadImportEvents = (fbSourceId) => {
   return (dispatch, getState) => {
     // Start the odissea
     const [ start, complete, fail ] = makeAsyncActions({
@@ -305,11 +306,12 @@ export function loadImportEvents() {
         LOAD_IMPORT_EVENTS_START,
         LOAD_IMPORT_EVENTS_COMPLETE,
         LOAD_IMPORT_EVENTS_FAILURE
-      ]
+      ],
+      data: { fbSourceId }
     });
 
     dispatch(start());
-    dispatch(getFbIdsToImport())
+    dispatch(getFbIdsToImport(fbSourceId))
       .then(({ fbIdsToImport, paging }) => {
 
         // No new events posted by page... Import complete!
@@ -348,22 +350,26 @@ export function loadImportEvents() {
           }, (r) => dispatch(fail(handleDashError(r))));
       }, (r) => dispatch(fail(handleFbError(r))));
   };
-}
+};
 
-export const showAlredyImportedEvents = () => ({
+export const showAlredyImportedEvents = (fbSourceId) => ({
+  fbSourceId,
   type: SHOW_ALREADY_IMPORTED_EVENTS
 });
 
-export const hideAlredyImportedEvents = () => ({
+export const hideAlredyImportedEvents = (fbSourceId) => ({
+  fbSourceId,
   type: HIDE_ALREADY_IMPORTED_EVENTS
 });
 
-export const showFullDescription = (fbid) => ({
+export const showFullDescription = (fbSourceId, fbid) => ({
+  fbSourceId,
   fbid,
   type: SHOW_IMPORT_EVENTS_FULL_DESCRIPTION
 });
 
-export const showLessDescription = (fbid) => ({
+export const showLessDescription = (fbSourceId, fbid) => ({
+  fbSourceId,
   fbid,
   type: SHOW_IMPORT_EVENTS_LESS_DESCRIPTION
 });

@@ -166,7 +166,9 @@ class ImportEventsControls extends Component {
   render() {
     const {
       receivedAt,
-      showAlredyImportedEvents,
+      filters: {
+        showAlredyImportedEvents,
+      },
       alredyImportedCount,
       onShowAlredyImportedEvents,
       onHideAlredyImportedEvents
@@ -203,12 +205,12 @@ export default class ImportEvents extends Component {
   render() {
     const {
       events,
-      alredyImportedCount,
       loading,
+      filters,
       receivedAt,
       canLoadMoreEvents,
+      alredyImportedCount,
       onLoadMoreEvents,
-      showAlredyImportedEvents,
       onEventImported,
       onEventResync,
       onEventDeleted,
@@ -224,8 +226,8 @@ export default class ImportEvents extends Component {
       <div>
         <ImportEventsControls
           receivedAt={receivedAt}
+          filters={filters}
           alredyImportedCount={alredyImportedCount}
-          showAlredyImportedEvents={showAlredyImportedEvents}
           onShowAlredyImportedEvents={onShowAlredyImportedEvents}
           onHideAlredyImportedEvents={onHideAlredyImportedEvents}
         />

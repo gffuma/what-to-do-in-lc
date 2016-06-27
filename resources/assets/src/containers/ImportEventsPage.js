@@ -1,9 +1,13 @@
 import React from 'react';
+import { bindActionCreators } from 'redux';
 import { connect } from 'react-redux';
 import ImportEvents from '../components/ImportEvents';
+import { Link } from 'react-router';
+import { mapValues, partial } from 'lodash';
 import {
-  getImportEvents,
-  countAlredyImportedEvents
+  makeGetEvents,
+  makeCountAlredyImportedEvents,
+  makeGetImportEventsUI
 } from '../selectors/importEvents';
 import {
   loadImportEvents,
@@ -22,40 +26,50 @@ import {
   loadCategories
 } from '../actions/categories';
 
+function loadData(props) {
+  props.loadCategories();
+  props.loadImportEventsFirstTime();
+}
+
 class ImportEventsPage extends React.Component {
   componentWillMount() {
-    this.props.loadCategories();
-    this.props.loadImportEventsFirstTime();
+    loadData(this.props);
+  }
+
+  componentWillReceiveProps(nextProps) {
+    if (nextProps.params.fbSourceId !== this.props.params.fbSourceId) {
+      loadData(nextProps);
+    }
   }
 
   render() {
     const {
       events,
-      alredyImportedCount,
       loading,
+      filters,
       receivedAt,
       canLoadMoreEvents,
+      alredyImportedCount,
+      loadImportEvents,
       importEvent,
       reSyncImportedEvent,
       deleteImportedEvent,
-      loadImportEvents,
       showFullDescription,
       showLessDescription,
       showAlredyImportedEvents,
       hideAlredyImportedEvents,
       addCategoryToEvent,
       removeCategoryFromEvent,
-      filters
     } = this.props;
 
     return (
       <ImportEvents
         events={events}
-        receivedAt={receivedAt}
-        alredyImportedCount={alredyImportedCount}
         loading={loading}
+        filters={filters}
+        receivedAt={receivedAt}
         canLoadMoreEvents={canLoadMoreEvents}
-        showAlredyImportedEvents={filters.showAlredyImportedEvents}
+        alredyImportedCount={alredyImportedCount}
         onLoadMoreEvents={loadImportEvents}
         onEventImported={importEvent}
         onEventResync={reSyncImportedEvent}
@@ -69,34 +83,47 @@ class ImportEventsPage extends React.Component {
       />
     );
   }
-
 }
 
-function mapStateToProps(state) {
-  const { filters } = state.importEvents;
-  const { loading, nextUrl, receivedAt } = state.importEvents.list;
+const makeMapStateToProps = () => {
+  const getEvents = makeGetEvents();
+  const countAlredyImportedEvents = makeCountAlredyImportedEvents();
+  const getImportEventsUI = makeGetImportEventsUI();
+
+  const mapStateToProps = (state, props) => ({
+    ...getImportEventsUI(state, props),
+    events: getEvents(state, props),
+    alredyImportedCount: countAlredyImportedEvents(state, props),
+  });
+  return mapStateToProps;
+};
+
+function mapDispatchToProps(dispatch, ownProps) {
+  const fbSourceId  = ownProps.params.fbSourceId;
+
+  const curryFbSourceId = actionCreators =>
+    mapValues(actionCreators, fn => partial(fn, fbSourceId));
+
+  const bindActionCreatorsWithFbSourceId = actionCreators =>
+    bindActionCreators(curryFbSourceId(actionCreators), dispatch);
 
   return {
-    events: getImportEvents(state),
-    alredyImportedCount: countAlredyImportedEvents(state) ,
-    canLoadMoreEvents: !!nextUrl,
-    receivedAt,
-    loading,
-    filters,
+    ...bindActionCreatorsWithFbSourceId({
+      loadImportEvents,
+      loadImportEventsFirstTime,
+      importEvent,
+      reSyncImportedEvent,
+      deleteImportedEvent,
+      showFullDescription,
+      showLessDescription,
+      showAlredyImportedEvents,
+      hideAlredyImportedEvents,
+      loadCategories,
+      addCategoryToEvent,
+      removeCategoryFromEvent,
+    }),
+    loadCategories: () => dispatch(loadCategories()),
   };
 }
 
-export default connect(mapStateToProps, {
-  loadImportEvents,
-  loadImportEventsFirstTime,
-  importEvent,
-  reSyncImportedEvent,
-  deleteImportedEvent,
-  showFullDescription,
-  showLessDescription,
-  showAlredyImportedEvents,
-  hideAlredyImportedEvents,
-  loadCategories,
-  addCategoryToEvent,
-  removeCategoryFromEvent,
-})(ImportEventsPage);
+export default connect(makeMapStateToProps, mapDispatchToProps)(ImportEventsPage);

@@ -3,8 +3,23 @@ import list from './list';
 import filters from './filters';
 import ui from './ui';
 
-export default combineReducers({
+const importEvents = combineReducers({
   list,
   filters,
   ui,
 });
+
+function multiSourceImportEvents(state = {}, action) {
+  const { fbSourceId } = action;
+
+  if (fbSourceId) {
+    return {
+      ...state,
+      [fbSourceId]:  importEvents(state[fbSourceId], action)
+    };
+  }
+
+  return state;
+}
+
+export default multiSourceImportEvents;
