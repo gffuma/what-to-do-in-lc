@@ -31,10 +31,13 @@ class AppController extends Controller
         ];
 
         // Webpack bundle
-        $bundleSrc =  env('APP_ENV') === 'production'
-            ? url('/dist/bundle.js') // Static file
-            : 'http://localhost:3000/dist/bundle.js'; // HMR
+        $bundleSrc =  env('WEBPACK_HMR')
+            ? 'http://localhost:3000/dist/bundle.js' // HMR
+            : url('/dist/bundle.js'); // Static file
 
-        return view('dashboard/react_app', compact('initialState', 'bundleSrc'));
+        // Num of thunders to show while react load
+        $thunders = rand(3, 30);
+
+        return view('dashboard/react_app', compact('initialState', 'bundleSrc', 'thunders'));
     }
 }

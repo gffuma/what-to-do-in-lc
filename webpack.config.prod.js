@@ -3,7 +3,10 @@ var webpack = require('webpack');
 
 module.exports = {
   devtool: 'source-map',
-  entry: './resources/assets/src/main.js',
+  entry: [
+    './resources/assets/src/styles/app.css',
+    './resources/assets/src/main.js',
+  ],
   output: {
     path: path.join(__dirname, 'public/dist'),
     filename: 'bundle.js',
@@ -29,6 +32,10 @@ module.exports = {
         loader: 'babel',
         exclude: /node_modules/,
         include: __dirname
+      },
+      {
+        test: /\.css$/,
+        loader: 'style-loader!css-loader'
       }
     ]
   }
