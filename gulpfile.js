@@ -13,6 +13,6 @@ var elixir = require('laravel-elixir');
 
 elixir(function(mix) {
   mix.sass('dashboard/app.scss', 'public/css/dashboard/app.css');
-  mix.sass('dashboard/signin.scss', 'public/css/dashboard/signin.css');
+  mix.sass('dashboard/login.scss', 'public/css/dashboard/login.css');
   mix.scripts(['jquery.min.js', 'bootstrap.min.js'], 'public/js/dashboard/app.js');
 });

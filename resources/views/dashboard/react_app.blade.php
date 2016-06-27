@@ -28,6 +28,7 @@
           <ul class="nav navbar-nav">
             <li><a href="/import">Import</a></li>
             <li><a href="/categories">Categories</a></li>
+            <li><a href="/logout">Logout</a></li>
           </ul>
         </div><!--/.nav-collapse -->
       </div>

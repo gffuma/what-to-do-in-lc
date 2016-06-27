@@ -41,6 +41,7 @@ export const handleDashError = (rejection, notify = true) => {
   const error = {
     message,
     response: rejection.response,
+    laravel: true,
   };
 
   // Add notify

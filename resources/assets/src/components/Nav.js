@@ -14,7 +14,7 @@ export default class Nav extends Component {
               <span className="sr-only">Toggle navigation</span>
               <span className="icon-bar"></span>
               <span className="icon-bar"></span>
-              <span class="icon-bar"></span>
+              <span className="icon-bar"></span>
             </button>
             <Link className="navbar-brand" to="/">What to do in LC &#9889; Dashboard</Link>
           </div>
@@ -22,6 +22,7 @@ export default class Nav extends Component {
             <ul className="nav navbar-nav">
               <NavLink to="/import">Import</NavLink>
               <NavLink to="/categories">Categories</NavLink>
+              <li><a href="/logout">Logout</a></li>
             </ul>
           </div>
         </div>

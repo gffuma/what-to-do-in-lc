@@ -1,22 +1,12 @@
 <?php
 
-/*
-|--------------------------------------------------------------------------
-| Application Routes
-|--------------------------------------------------------------------------
-|
-| Here is where you can register all of the routes for an application.
-| It's a breeze. Simply tell Laravel the URIs it should respond to
-| and give it the controller to call when that URI is requested.
-|
-*/
-
 // Dashboard
 Route::group(['domain' => env('DASHBOARD_DOMAIN'), 'namespace' => 'Dashboard'], function () {
 
     // TODO: Handle exception with json in API
+    // TODO: Handle 401 with json
     // le Dashboard API
-    Route::group(['prefix' => 'api', 'namespace' => 'Api'], function () {
+    Route::group(['prefix' => 'api', 'namespace' => 'Api', 'middleware' => 'auth'], function () {
 
         // Events...
 
@@ -48,14 +38,25 @@ Route::group(['domain' => env('DASHBOARD_DOMAIN'), 'namespace' => 'Dashboard'], 
         Route::delete('categories/{category}', 'CategoryController@deleteCategory');
     });
 
+    // Auth...
+    Route::get('login', 'Auth\AuthController@showLoginForm');
+    Route::post('login', 'Auth\AuthController@login');
+    Route::get('logout', 'Auth\AuthController@logout');
+
     // TODO: Better regex for only sense paths
     // Serve reudx dashboard app
     Route::get('{route}', 'AppController@serve')
-        ->where(['route' => '.*']);
+        ->where(['route' => '[a-z]*'])
+        ->middleware(['auth']);
 });
 
 // Frontend
-Route::get('/', 'HomeController@showIndex');
-Route::get('/_-_', 'EventController@showSecrets');
-//Route::get('/{category}', 'CategoryController@showIndexCategory');
-//Route::get('/{category}/weekend', 'CategoryController@showCategoryInWeekend');
+Route::group(['domain' => env('FRONTEND_DOMAIN')], function () {
+
+    Route::get('/', 'HomeController@showIndex');
+    Route::get('/_-_', 'EventController@showSecrets');
+
+    //Route::get('/{category}', 'CategoryController@showIndexCategory');
+    //Route::get('/{category}/weekend', 'CategoryController@showCategoryInWeekend');
+});
+
