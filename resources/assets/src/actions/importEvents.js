@@ -289,7 +289,8 @@ export function importEvent(fbid) {
 // Load events only if no receivedAt
 export function loadImportEventsFirstTime() {
   return (dispatch, getState) => {
-    if (!getState().importEvents.list.receivedAt) {
+    const list = getState().importEvents.list;
+    if (!list.receivedAt && !list.loading) {
       dispatch(loadImportEvents());
     }
   };
